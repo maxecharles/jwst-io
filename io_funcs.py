@@ -599,104 +599,70 @@ def plot_io_with_truth(model, model_fn, data, losses, ngroups, opt_state, initia
     fin_dist = model.source.distribution + model.volcanoes
 
     nrows = 4
-    # io_max = np.max(np.array([np.nanmax(fin_dist), np.nanmax(truth), np.nanmax(initial_distribution)]))
     io_max = np.nanmax(truth)
-    
 
     extents = get_arcsec_extents(model.psf_pixel_scale / model.optics.oversample, fin_dist.shape)
 
-    plt.figure(figsize=(13, 3*nrows + 3))
-    plt.subplot(nrows, 3, 1)
-    plt.imshow(initial_distribution, cmap="afmhot_10u", vmin=0, vmax=io_max, extent=extents)
-    plt.colorbar(label="flux")
-    plt.title("Io Initial Distribution")
-    plt.xlabel("arcsec")
-    plt.ylabel("arcsec")
-    plot_diffraction_limit(model)
-    # plt.xticks([0, fin_dist.shape[0]-1])
-    # plt.yticks([0, fin_dist.shape[1]-1])
+    fig, axs = plt.subplots(nrows=nrows, ncols=3, figsize=(17, 3*nrows + 5))
 
-    if np.nanmin(fin_dist) < 0:
-        rec_vmin=None
-    else:
-        rec_vmin=0
+    # Plot initial distribution
+    im0 = plot_io(axs[0, 0], initial_distribution, roll_angle_degrees=roll_angle_degrees, model=model, vmax=io_max)
+    fig.colorbar(im0, ax=axs[0, 0], label="flux")
+    axs[0, 0].set_title("Io Initial Distribution")
 
-    plt.subplot(nrows, 3, 2)
-    plt.imshow(fin_dist, cmap="afmhot_10u", vmin=rec_vmin, vmax=io_max, extent=extents)
-    plt.colorbar(label="flux")
-    plt.title("Io Recovered Distribution")
-    plt.xlabel("arcsec")
-    plt.ylabel("arcsec")
-    plot_diffraction_limit(model)
-    # plt.xticks([0, fin_dist.shape[0]-1])
-    # plt.yticks([0, fin_dist.shape[1]-1])
+    im1 = plot_io(axs[0, 1], fin_dist, roll_angle_degrees=roll_angle_degrees, model=model, vmax=io_max)
+    fig.colorbar(im1, ax=axs[0, 1], label="flux")
+    axs[0, 1].set_title("Io Recovered Distribution")
 
-    plt.subplot(nrows, 3, 3)
-    plt.imshow(truth, cmap="afmhot_10u", vmin=0, vmax=io_max, extent=extents)
-    plt.colorbar(label="flux / iter")
-    plt.title(f"True Distribution")
-    plt.xlabel("arcsec")
-    plt.ylabel("arcsec")
-    # plt.xticks([0, fin_dist.shape[0]-1])
-    # plt.yticks([0, fin_dist.shape[1]-1])
 
-    plt.subplot(nrows, 3, 4)
+    # Plot true distribution
+    im2 = plot_io(axs[0, 2], truth, roll_angle_degrees=roll_angle_degrees, model=model, vmax=io_max)
+    fig.colorbar(im2, ax=axs[0, 2], label="flux / iter")
+    axs[0, 2].set_title(f"True Distribution")
+
+    # Plot final gradient state
     try:
         grads = opt_state[0]['0'].inner_state[0][0].volcanoes  # TODO this is wrong maybe
-        plt.imshow(grads, **get_residual_bounds(grads), extent=extents)
+        # im3 = axs[1, 0].imshow(grads, **get_residual_bounds(grads), extent=extents)
+        im3 = plot_io(axs[1, 0], grads, roll_angle_degrees=roll_angle_degrees, model=model, **get_residual_bounds(grads), show_diff_lim=False, bg_color='white')
+        fig.colorbar(im3, ax=axs[1, 0], label="flux / iter")
+        axs[1, 0].set_title(f"Final Gradient State. Loss: {losses[-1]:.1f}")
     except:
         print('bruh')
-    plt.colorbar(label="flux / iter")
-    plt.title(f"Final Gradient State. Loss: {losses[-1]:.1f}")
-    plt.xlabel("arcsec")
-    plt.ylabel("arcsec")
-    # plt.xticks([0, grads.shape[0]-1])
-    # plt.yticks([0, grads.shape[1]-1])
 
-    io_resids, bound_dict = get_residuals(fin_dist, truth, return_bounds=True)
-    plt.subplot(nrows, 3, 5)
-    plt.imshow(io_resids, **bound_dict, extent=extents)
-    plt.colorbar(label="flux / iter")
-    plt.title(f"Final Residuals. Loss: {losses[-1]:.1f}")
-    plt.xlabel("arcsec")
-    plt.ylabel("arcsec")
-    # plt.xticks([0, grads.shape[0]-1])
-    # plt.yticks([0, grads.shape[1]-1])
+    # Plot final residuals
+    io_resids, bound_dict = get_residuals(fin_dist, truth, return_bounds=True)  
+    # im4 = axs[1, 1].imshow(io_resids, **bound_dict, extent=extents)
+    im4 = plot_io(axs[1, 1], io_resids, roll_angle_degrees=roll_angle_degrees, model=model, **bound_dict, show_diff_lim=False, bg_color='white')
+    fig.colorbar(im4, ax=axs[1, 1], label="flux / iter")
+    axs[1, 1].set_title(f"Final Residuals. Loss: {losses[-1]:.1f}")
 
-
+    axs[1, 2].imshow(np.zeros((1, 1)), cmap='Greys')
+    axs[1, 2].set(
+        xticks=[], yticks=[],
+    )
 
     model_imgs = model_fn(model, n_groups=ngroups)
 
     for grp_idx, grp_no in enumerate(np.arange(-1, 1)):
-        plt.subplot(nrows, 3, 7 + 3*grp_idx)
-        plt.imshow(model_imgs[grp_no], cmap="cividis", vmin=0,)
-        plt.colorbar(label="flux")
-        plt.title(f"Model Image, Grp:{grp_no}")
-        plt.xticks([0, fin_dist.shape[0]-1])
-        plt.yticks([0, fin_dist.shape[1]-1])
+        im5 = axs[2+grp_idx, 0].imshow(model_imgs[grp_no], cmap="cividis", vmin=0,)
+        fig.colorbar(im5, ax=axs[2+grp_idx, 0], label="flux")
+        axs[2+grp_idx, 0].set_title(f"Model Image, Grp:{grp_no}")
+        axs[2+grp_idx, 0].set_xticks([0, fin_dist.shape[0]-1])
+        axs[2+grp_idx, 0].set_yticks([0, fin_dist.shape[1]-1])
 
-        plt.subplot(nrows, 3, 8 + 3*grp_idx)
-        plt.imshow(data[grp_no], cmap="cividis", vmin=0,)
-        plt.colorbar(label="flux")
-        plt.title(f"Data, Grp:{grp_no}")
-        plt.xticks([0, fin_dist.shape[0]-1])
-        plt.yticks([0, fin_dist.shape[1]-1])
+        im6 = axs[2+grp_idx, 1].imshow(data[grp_no], cmap="cividis", vmin=0,)
+        fig.colorbar(im6, ax=axs[2+grp_idx, 1], label="flux")
+        axs[2+grp_idx, 1].set_title(f"Data, Grp:{grp_no}")
+        axs[2+grp_idx, 1].set_xticks([0, fin_dist.shape[0]-1])
+        axs[2+grp_idx, 1].set_yticks([0, fin_dist.shape[1]-1])
 
         residuals, bound_dict = get_residuals(model_imgs[grp_no], data[grp_no], return_bounds=True)
-        plt.subplot(nrows, 3, 9 + 3*grp_idx)
-        plt.imshow(residuals, **bound_dict)
-        plt.colorbar(label="flux")
-        plt.title(f"Residuals, Grp:{grp_no}")
-        plt.xticks([0, fin_dist.shape[0]-1])
-        plt.yticks([0, fin_dist.shape[1]-1])
-
-        # llim = exp.loglike_im(model_imgs)
-        # plt.subplot(nrows, 4, 8 + 4*grp_idx)
-        # plt.imshow(-llim)
-        # plt.colorbar()
-        # plt.title(f"Neg Log Likelihood")
-        # plt.xticks([0, model_imgs[grp_no].shape[0]-1])
-        # plt.yticks([0, model_imgs[grp_no].shape[1]-1])
+        im7 = axs[2+grp_idx, 2].imshow(residuals, **bound_dict)
+        fig.colorbar(im7, ax=axs[2+grp_idx, 2], label="flux")
+        axs[2+grp_idx, 2].set_title(f"Residuals, Grp:{grp_no}")
+        axs[2+grp_idx, 2].set_xticks([0, fin_dist.shape[0]-1])
+        axs[2+grp_idx, 2].set_yticks([0, fin_dist.shape[1]-1])
 
     if save is not None:
         plt.savefig(f"{save}result.pdf")
