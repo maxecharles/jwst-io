@@ -595,6 +595,43 @@ def get_arcsec_extents(pixel_scale, shape):
     return np.array([-0.5, 0.5, -0.5, 0.5]) * pixel_scale * shape[0]
 
 
+def plot_io(
+        ax,
+        array,
+        roll_angle_degrees: float = 0.0,
+        pixel_scale: float = 0.0656 / 4,
+        model=None,
+        show_diff_lim: bool = True,
+        cmap: str = 'afmhot_10u',
+        bg_color: str = 'k',
+        axis_labels: dict = {'xlabel': r"$\Delta$RA [arcsec]", 'ylabel': r"$\Delta$DEC [arcsec]"},
+        vmin: float = 0.,
+        vmax: float = None,
+        ):
+    
+
+    rotation_transform = Affine2D().rotate_deg(roll_angle_degrees)  # Create a rotation transformation
+
+    ax.set_facecolor(bg_color)  # Set the background colour to black
+    ax.set(**axis_labels)  # Set the axis labels
+    if model is not None:
+        pixel_scale = model.psf_pixel_scale / model.optics.oversample
+        if show_diff_lim:
+            ax = plot_diffraction_limit(model, ax, OOP=True)
+    im = ax.imshow(
+        array,
+        cmap=cmap,
+        extent=get_arcsec_extents(pixel_scale, array.shape),
+        vmin=vmin,
+        vmax=vmax,
+        )
+    
+    trans_data = rotation_transform + ax.transData  # creating transformation
+    im.set_transform(trans_data)  # applying transformation to image
+
+    return im
+
+
 def plot_io_with_truth(model, model_fn, data, losses, ngroups, opt_state, initial_distribution=None, truth=None, save: str = None):
     fin_dist = model.source.distribution + model.volcanoes
 
