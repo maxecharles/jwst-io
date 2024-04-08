@@ -1,3 +1,5 @@
+import os
+
 import dLux
 from dLux.sources import Source
 from dLux.psfs import PSF
@@ -14,6 +16,8 @@ from numpy import random as rd
 
 from matplotlib import pyplot as plt
 from matplotlib import colormaps
+from matplotlib.transforms import Affine2D
+
 seismic = colormaps["seismic"]
 seismic.set_bad("k", 0.5)
 
@@ -632,7 +636,7 @@ def plot_io(
     return im
 
 
-def plot_io_with_truth(model, model_fn, data, losses, ngroups, opt_state, initial_distribution=None, truth=None, save: str = None):
+def plot_io_with_truth(model, model_fn, data, losses, ngroups, opt_state, initial_distribution=None, truth=None, save: str = None, roll_angle_degrees=0.0, ):
     fin_dist = model.source.distribution + model.volcanoes
 
     nrows = 4
@@ -747,6 +751,30 @@ def get_residuals(arr1: Array, arr2: Array, return_bounds: bool = False):
         return residuals, bound_dict
     
     return residuals
+
+
+def niriss_parang(hdr):
+    """
+    Stolen from AMICAL!
+    """
+    if hdr is None:
+        warnings.warn(
+            "No SCI header for NIRISS. No PA correction will be applied.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return 0.0
+    v3i_yang = hdr["V3I_YANG"]  # Angle from V3 axis to ideal y axis (deg)
+    roll_ref_pa = hdr["ROLL_REF"]  # Offset between V3 and N in local aperture coord
+
+    return roll_ref_pa - v3i_yang
+
+
+def get_extents(data, pixel_scale: float = None):
+    x = data.shape[0]
+    if pixel_scale is not None:
+        x *= pixel_scale
+    return {"extent": (-x/2, x/2, -x/2, x/2)}
 
 
 def add_noise_to_ramp(clean_ramp):
