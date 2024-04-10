@@ -1,8 +1,8 @@
 # (lon, lat)
-volcanoes = [
 """
 Taken from https://doi.org/10.1016/j.icarus.2019.113607
 """
+volcanoes = [
     (51.6, 50.1),
     (70.5, 56.3),
     (88.3, 50.5),
