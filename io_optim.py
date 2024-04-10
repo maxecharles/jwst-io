@@ -23,8 +23,8 @@ jax.config.update("jax_enable_x64", True)
 
 """Changing stuff"""
 # optimisation
-n_epoch = 200
-L1 = 1e0
+n_epoch = 500
+L1 = 0e0
 
 config = {
     # "distribution": opt(5e-7, 30),
@@ -43,13 +43,37 @@ config = {
 output_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/output/"
 
 # model
-ngroups = 3
+ngroups = 500
 model_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/bfe/"
 filter_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/data/niriss_filters/"
 
+"""Saving stuff"""
+def save_script_to_txt(save_dir: str):
+    # Get the path of the current Python script
+    script_path = os.path.abspath(__file__)
+
+    # Open the script file for reading
+    with open(script_path, 'r') as script_file:
+        script_content = script_file.read()
+
+    # Define the path for the output text file (e.g., 'script.txt')
+    output_file_path = save_dir + 'script.txt'
+
+    # Write the script content to the output text file
+    with open(output_file_path, 'w') as output_file:
+        output_file.write(script_content)
+        
+now = lambda: datetime.datetime.now().strftime("%H.%M.%S_%d:%m:%Y")
+save_dir = output_dir + now() + "/"
+
+# creating save directory
+if not os.path.exists(save_dir):
+    os.makedirs(save_dir)
+
+save_script_to_txt(save_dir)  # saving copy of script to save directory
+
 """Load data."""
 io = DefinitelyRealIo(night_day_ratio=1, volc_contrast=1e-2, seed=2, n_volcanoes=3)
-
 
 """Set up the model."""
 BFE = deserialise(model_dir + "PolyBFE_trained.zdx")
@@ -169,13 +193,7 @@ final_model, losses, params_out, opt_state = optimise(
 )
 
 """Plotting"""
-now = lambda: datetime.datetime.now().strftime("%H.%M.%S_%d:%m:%Y")
-save_path = output_dir + now() + "/"
-
-if not os.path.exists(save_path):
-    os.makedirs(save_path)
-
-plot_params(true_model, losses, params_out, format_fn, save=save_path)
+plot_params(true_model, losses, params_out, format_fn, save=save_dir)
 
 plot_io_with_truth(
     final_model,
@@ -186,5 +204,5 @@ plot_io_with_truth(
     opt_state,
     initial_distribution=initial_model.source.distribution,
     truth=true_model.distribution,
-    save=save_path,
+    save=save_dir,
     )
