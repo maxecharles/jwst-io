@@ -115,14 +115,10 @@ def format_fn(params_out, param, ax, alpha=0.75, true_model=None):
 
     ax.set(title=param, xlabel="Epochs")
 
-    leaf = list(prep_observations_for_plot(params_out)[param])
-
-    if isinstance(leaf, list):
-        arr = np.array(leaf)
-    elif param == "stars":
-        pass
-    else:
-        arr = invert_params(leaf)
+    try:
+        arr = np.array(list(prep_observations_for_plot(params_out)[param]))
+    except:
+        arr = np.array(list(prep_sim_params_for_plot(params_out)[param]))
 
     if param == "distribution":
         arr = arr.reshape(arr.shape[0], -1)
@@ -276,6 +272,21 @@ def prep_observations_for_plot(params_out):
     return prepped_params_out
 
 
+def prep_sim_params_for_plot(params_out):
+
+    prepped_params_out = {}
+    for param, value in zip(params_out.params.keys(), params_out.params.values()):
+
+        value = np.array(value)
+
+        if len(value.shape) > 2:
+            value = value.reshape(value.shape[0], -1)
+
+        prepped_params_out[param] = value
+
+    return prepped_params_out
+
+
 def plotting_cal_comparison(model, exposures, model_fn):
 
     nrows = 2 * len(exposures)
@@ -419,7 +430,7 @@ def plot_io_with_truth(
         model=model,
         vmax=io_max,
     )
-    fig.colorbar(im2, ax=axs[0, 2], label="flux / iter")
+    fig.colorbar(im2, ax=axs[0, 2], label="flux")
     axs[0, 2].set_title(f"True Distribution")
 
     # Plot final gradient state
@@ -454,7 +465,7 @@ def plot_io_with_truth(
         show_diff_lim=False,
         bg_color="white",
     )
-    fig.colorbar(im4, ax=axs[1, 1], label="flux / iter")
+    fig.colorbar(im4, ax=axs[1, 1], label="flux")
     axs[1, 1].set_title(f"Final Residuals. Loss: {losses[-1]:.1f}")
 
     axs[1, 2].imshow(np.zeros((1, 1)), cmap="Greys")
@@ -463,7 +474,7 @@ def plot_io_with_truth(
         yticks=[],
     )
 
-    model_imgs = model_fn(model, n_groups=ngroups)
+    model_imgs = model_fn(model, ngroups=ngroups)
 
     for grp_idx, grp_no in enumerate(np.arange(-1, 1)):
         im5 = axs[2 + grp_idx, 0].imshow(
