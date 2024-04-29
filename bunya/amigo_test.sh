@@ -4,11 +4,11 @@
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=1024G
 #SBATCH --job-name=amigo
-#SBATCH --time=0:01:00
+#SBATCH --time=0:00:30
 #SBATCH --partition=general
 #SBATCH --account=a_astro
-#SBATCH --output=results/visfit.out
-#SBATCH --error=results/visfit.error
+#SBATCH --output=output/amigo_test.out
+#SBATCH --error=output/out.error
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=max.charles@sydney.edu.au
 
