@@ -412,6 +412,43 @@ def io_model_fn(model, exposure, with_BFE=True, to_BFE=False, zero_idx=-1, noise
     return np.diff(ramp, axis=0)
 
 
+def sim_io_model_fn(model, ngroups, to_BFE=False, noise=True):
+
+    source = model.source.set(
+        ["position", "log_flux"],
+        [model.position, model.log_flux],
+    )
+
+    distribution = model.disk.data + model.volc_contrast * model.volcanoes
+    source = source.set('distribution', distribution)  # ONLY FIT THE VOLCANOES
+
+    # Apply correct aberrations
+    optics = model.optics.set("coefficients", model.aberrations)
+
+    # Make sure this has correct position units and get wavefronts
+    PSF = source.model(optics, return_psf=True)
+
+    # Apply the detector model and turn it into a ramp
+    psf = model.detector.model(PSF)
+    ramp = model_ramp(psf, ngroups)
+
+
+    if to_BFE:
+        return ramp
+
+    # Now apply the CNN BFE and downsample
+    ramp = eqx.filter_vmap(model.BFE.apply_array)(ramp)
+    ramp = vmap(dlu.resize, (0, None))(ramp, 80)
+
+    # Apply bias and one of F correction
+    if noise:
+        # ramp += total_read_noise(model.biases[key], model.one_on_fs[key])
+        ramp += total_amplifier_noise(model.one_on_fs)
+
+    # return ramp
+    return np.diff(ramp, axis=0)
+
+
 def initialise_disk(pixel_scale=0.065524085, oversample=4, normalise=False):
     io_initial_distance = 4.36097781166671 * u.AU
     io_final_distance = 4.36088492436330 * u.AU

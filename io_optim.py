@@ -1,13 +1,17 @@
 """Imports"""
-from io_funcs import *
-from optim_funcs import *
+from io_funcs import DefinitelyRealIo, get_filter_spectrum, IoSource, add_noise_to_ramp, initialise_disk
+from io_funcs import io_model_fn as model_fn
+from optim_funcs import opt, adam_opt, loss_fn, norm_fn
+from plotting import plot_params, plot_io_with_truth
 
 import os
+import datetime
 
 from zodiax.experimental import deserialise
 import jax
-from jax import numpy as np, random as jr
+from jax import numpy as np, random as jr, vmap
 import equinox as eqx
+import dLux.utils as dlu
 
 import webbpsf
 from amigo.core import AMIOptics, SUB80Ramp, BaseModeller
@@ -120,35 +124,6 @@ params["disk"] = io.disk
 params["volc_contrast"] = 5e-2
 true_model = BaseModeller(params)
 
-def model_fn(model, n_groups=ngroups):
-
-    source = model.source.set(
-        ["position", "log_flux"],
-        [model.position, model.log_flux],
-    )
-
-    distribution = model.disk.data + model.volc_contrast * model.volcanoes
-    source = source.set('distribution', distribution)  # ONLY FIT THE VOLCANOES
-
-    # # Apply correct aberrations
-    # optics = model.optics.set("coefficients", model.aberrations)
-
-    # Make sure this has correct position units and get wavefronts
-    PSF = source.model(optics, return_psf=True)
-
-    # Apply the detector model and turn it into a ramp
-    psf = model.detector.model(PSF)
-    ramp = model_ramp(psf, n_groups)
-
-    # Now apply the CNN BFE and downsample
-    ramp = eqx.filter_vmap(model.BFE.apply_array)(ramp)
-    ramp = vmap(dlu.resize, (0, None))(ramp, 80)
-
-    # Apply bias and one of F correction
-    ramp += total_read_noise(model.biases, model.OneOnFs)
-    return ramp
-
-
 """Simulating data"""
 clean_int = model_fn(true_model, n_groups=ngroups)
 data = add_noise_to_ramp(clean_int)  # adding photon noise to ramp
@@ -193,7 +168,7 @@ final_model, losses, params_out, opt_state = optimise(
 )
 
 """Plotting"""
-plot_params(true_model, losses, params_out, format_fn, save=save_dir)
+plot_params(np.array(losses), params_out, save=save_dir, true_model=true_model)
 
 plot_io_with_truth(
     final_model,
