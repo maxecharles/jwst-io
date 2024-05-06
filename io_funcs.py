@@ -27,63 +27,20 @@ Optics = lambda: dLux.optical_systems.BaseOpticalSystem
 Spectrum = lambda: dLux.spectra.BaseSpectrum
 
 
-class IoSource(Source):
-    """
-    A single resolved source with a spectrum, position, flux, and distribution array
-    that represents the resolved component.
-
-    ??? abstract "UML"
-        ![UML](../../assets/uml/ResolvedSource.png)
-
-    Attributes
-    ----------
-    position : Array, radians
-        The (x, y) on-sky position of this object.
-    flux : float, photons
-        The flux of the object.
-    distribution : Array
-        The array of intensities representing the resolved source.
-    spectrum : Spectrum
-        The spectrum of this object, represented by a Spectrum object.
-    """
-
-    distribution: Array
-    log_flux: Array
+class BaseIoSource(Source):
+    log_flux: Array | float
     position: Array
 
     def __init__(
         self: Source,
-        wavelengths: Array = None,
         position: Array | tuple = np.zeros(2),  # arcseconds
         log_flux: Array | float = 7.0,
-        distribution: Array = np.ones((3, 3)),
+        wavelengths: Array = None,
         weights: Array = None,
         spectrum: Spectrum() = None,
     ):
-        """
-        Parameters
-        ----------
-        wavelengths : Array, metres
-            The array of wavelengths at which the spectrum is defined.
-        position : Array, radians = np.zeros(2)
-            The (x, y) on-sky position of this object.
-        flux : float, photons = 1.
-            The flux of the object.
-        distribution : Array = np.ones((3, 3))
-            The array of intensities representing the resolved source.
-        weights : Array = None
-            The spectral weights of the object.
-        spectrum : Spectrum = None
-            The spectrum of this object, represented by a Spectrum object.
-        """
-        distribution = np.asarray(distribution, dtype=float)
-        self.distribution = distribution / distribution.sum()
-
         self.position = np.array(position, dtype=float)  # arcseconds
         self.log_flux = np.array(log_flux, dtype=float)
-
-        if self.distribution.ndim != 2:
-            raise ValueError("distribution must be a 2d array.")
 
         super().__init__(wavelengths=wavelengths, weights=weights, spectrum=spectrum)
 
@@ -93,26 +50,6 @@ class IoSource(Source):
         return_wf: bool = False,
         return_psf: bool = False,
     ) -> Array:
-        """
-        Models the source object through the provided optics.
-
-        Parameters
-        ----------
-        optics : Optics
-            The optics through which to model the source object.
-        return_wf : bool = False
-            Should the Wavefront object be returned instead of the psf Array?
-        return_psf : bool = False
-            Should the PSF object be returned instead of the psf Array?
-
-        Returns
-        -------
-        object : Array, Wavefront, PSF
-            if `return_wf` is False and `return_psf` is False, returns the psf Array.
-            if `return_wf` is True and `return_psf` is False, returns the Wavefront
-                object.
-            if `return_wf` is False and `return_psf` is True, returns the PSF object.
-        """
         if return_wf and return_psf:
             raise ValueError(
                 "return_wf and return_psf cannot both be True. " "Please choose one."
@@ -133,6 +70,128 @@ class IoSource(Source):
 
         # Return psf object
         conv_psf = convolve(wf.psf.sum(0), self.distribution, mode="same")
+        if return_psf:
+            return PSF(conv_psf, wf.pixel_scale.mean())
+
+        # Return array psf
+        return conv_psf
+
+
+class SimpleIoSource(BaseIoSource):
+    distribution: Array
+
+    def __init__(
+        self: Source,
+        position: Array | tuple = np.zeros(2),  # arcseconds
+        log_flux: Array | float = 7.0,
+        distribution: Array = None,
+        wavelengths: Array = None,
+        weights: Array = None,
+        spectrum: Spectrum() = None,
+    ):
+        self.distribution = np.array(distribution, dtype=float)
+
+        super().__init__(
+            position=position,
+            log_flux=log_flux,
+            wavelengths=wavelengths,
+            weights=weights,
+            spectrum=spectrum,
+        )
+
+
+class ComplexIoSource(BaseIoSource):
+    volc_contrast: Array | float
+    log_volcanoes: Array
+    disk: Array
+
+    def __init__(
+        self: Source,
+        position: Array | tuple = np.zeros(2),  # arcseconds
+        log_flux: Array | float = 7.0,
+        volc_contrast: Array | float = 1e-2,
+        log_volcanoes: Array = None,
+        disk: Array = None,
+        wavelengths: Array = None,
+        weights: Array = None,
+        spectrum: Spectrum() = None,
+    ):
+        if disk is None:
+            self.disk = dLux.PSF(
+                initialise_disk(0.065524085, 4, normalise=True), 0.065524085
+            )
+        else:
+            self.disk = disk
+
+        if log_volcanoes is None:
+            self.log_volcanoes = dLux.PSF(
+                initialise_disk(0.065524085, 4, normalise=True), 0.065524085
+            ).data
+        else:
+            self.log_volcanoes = np.array(log_volcanoes)
+
+        self.position = np.array(position, dtype=float)  # arcseconds
+        self.log_flux = np.array(log_flux, dtype=float)
+        self.volc_contrast = np.array(volc_contrast, dtype=float)
+
+        super().__init__(
+            position=position,
+            log_flux=log_flux,
+            wavelengths=wavelengths,
+            weights=weights,
+            spectrum=spectrum,
+        )
+
+    @property
+    def volcanoes(self: Source) -> Array:
+        """
+        Returns the volcano distribution.
+        """
+        volcanoes = np.power(10, np.array(self.log_volcanoes))
+        return volcanoes / volcanoes.sum()
+
+    @property
+    def distribution(self: Source) -> Array:
+        """
+        Assuming the disk and volcanoes array sum to 1, this property returns the
+        source intensity distribution which also sums to 1.
+        """
+        return (
+            1.0 - self.volc_contrast
+        ) * self.disk.data + self.volc_contrast * self.volcanoes
+
+    def model(
+        self: Source,
+        optics: Optics = None,
+        return_wf: bool = False,
+        return_psf: bool = False,
+    ) -> Array:
+        if return_wf and return_psf:
+            raise ValueError(
+                "return_wf and return_psf cannot both be True. " "Please choose one."
+            )
+
+        weights = self.weights * (10**self.log_flux)
+
+        # Note we always return wf here so we can convolve each wavelength
+        # individually if a chromatic wavefront output is required.
+        wf = optics.propagate(
+            self.wavelengths, dlu.arcsec2rad(self.position), weights, return_wf=True
+        )
+
+        volcanoes = np.power(10, np.array(self.log_volcanoes))
+        volcanoes /= volcanoes.sum()
+        distribution = (
+            1.0 - self.volc_contrast
+        ) * self.disk.data + self.volc_contrast * volcanoes
+
+        # Returning wf is a special case
+        if return_wf:
+            conv_fn = lambda psf: convolve(psf, distribution, mode="same")
+            return wf.set("amplitude", vmap(conv_fn)(wf.psf) ** 0.5)
+
+        # Return psf object
+        conv_psf = convolve(wf.psf.sum(0), distribution, mode="same")
         if return_psf:
             return PSF(conv_psf, wf.pixel_scale.mean())
 
@@ -369,14 +428,14 @@ def io_model_fn(model, exposure, with_BFE=True, to_BFE=False, zero_idx=-1, noise
     if exposure.star == "IO":
         weights = filt_weights  # TODO spectrum
     elif exposure.star == "PSFCAL.2022A-HD2236-K6":
-        weights = filt_weights * planck(wavels, model.Teffs[exposure.star])  
+        weights = filt_weights * planck(wavels, model.Teffs[exposure.star])
     # weights *= 10 ** (model.log_fluxes[key]) / weights.sum()
 
     source = model.source.set(
         ["position", "log_flux", "wavelengths", "weights"],
         [model.positions[key], model.log_fluxes[key], wavels, weights],
     )
-    
+
     # Apply correct aberrations
     aberrations = model.aberrations[key]
     if zero_idx != -1:
@@ -413,25 +472,14 @@ def io_model_fn(model, exposure, with_BFE=True, to_BFE=False, zero_idx=-1, noise
 
 
 def sim_io_model_fn(model, ngroups, to_BFE=False, noise=True):
+    source = model.source
+    optics = model.optics
 
-    source = model.source.set(
-        ["position", "log_flux"],
-        [model.position, model.log_flux],
-    )
-
-    distribution = model.disk.data + model.volc_contrast * model.volcanoes
-    source = source.set('distribution', distribution)  # ONLY FIT THE VOLCANOES
-
-    # Apply correct aberrations
-    optics = model.optics.set("coefficients", model.aberrations)
-
-    # Make sure this has correct position units and get wavefronts
     PSF = source.model(optics, return_psf=True)
 
     # Apply the detector model and turn it into a ramp
     psf = model.detector.model(PSF)
     ramp = model_ramp(psf, ngroups)
-
 
     if to_BFE:
         return ramp
@@ -531,3 +579,27 @@ def add_noise_to_ramp(clean_ramp):
 
     return np.array(ramp)
 
+
+def diff_lim_to_cov(model):
+    lambda_on_D = dlu.rad2arcsec(
+        model.source.wavelengths.mean() / model.optics.diameter
+    )
+    sigma = 1.025 / (2 * np.sqrt(2 * np.log(2))) * lambda_on_D
+    return [[sigma**2, 0], [0, sigma**2]]
+
+
+def get_pscale(model):
+    return model.optics.psf_pixel_scale / model.optics.oversample
+
+
+def blur_distribution(model, extent=0.15):
+    cov = diff_lim_to_cov(model)
+
+    x = np.arange(-extent, extent, get_pscale(model))
+    X, Y = np.meshgrid(x, x)
+    pos = np.dstack((X, Y))
+
+    kernel = jsp.stats.multivariate_normal.pdf(jr.PRNGKey(0), pos, np.array(cov))
+
+    distribution = jsp.signal.convolve2d(model.distribution, kernel, mode="same")
+    return distribution / distribution.sum()

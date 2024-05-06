@@ -5,6 +5,8 @@ from jax import Array, vmap, numpy as np, random as jr, scipy as jsp
 
 import numpy as onp
 
+from io_funcs import blur_distribution
+
 from matplotlib import pyplot as plt, colormaps
 from matplotlib.transforms import Affine2D
 
@@ -132,6 +134,11 @@ def format_fn(params_out, param, ax, alpha=0.75, true_model=None):
         ax.set(ylabel="Volcano Distribution")
         ax.axhline(0, color="k", linestyle="--")
 
+    elif param == "log_volcanoes":
+        arr = arr.reshape(arr.shape[0], -1)
+        ax.plot(arr, alpha=0.05, linewidth=1)
+        ax.set(ylabel="Volcano Distribution")
+
     elif param == "volc_contrast":
         ax.plot(arr)
         ax.set(ylabel="Volcano Contrast")
@@ -153,7 +160,7 @@ def format_fn(params_out, param, ax, alpha=0.75, true_model=None):
         if truth:
             ax.axhline(true_model.log_flux, color="r", linestyle="--")
 
-    elif "aberrations" in param:
+    elif "aberrations" in param or param == "optics.coefficients":
         arr = arr.reshape(arr.shape[0], -1)
         arr -= arr[0]
         ax.plot(arr - arr[0], alpha=0.25)
@@ -386,76 +393,67 @@ def plot_io_with_truth(
     ngroups,
     opt_state,
     initial_distribution=None,
-    truth=None,
+    true_model=None,
     save: str = None,
     roll_angle_degrees=0.0,
+    cmap="afmhot_10u",
+    io_max=None,
 ):
-    fin_dist = model.source.distribution + model.volcanoes
+    fin_dist = model.source.distribution
 
     nrows = 4
-    io_max = np.nanmax(truth)
-
-    extents = get_arcsec_extents(
-        model.psf_pixel_scale / model.optics.oversample, fin_dist.shape
-    )
 
     fig, axs = plt.subplots(nrows=nrows, ncols=3, figsize=(17, 3 * nrows + 5))
 
-    # Plot initial distribution
     im0 = plot_io(
         axs[0, 0],
-        initial_distribution,
-        roll_angle_degrees=roll_angle_degrees,
-        model=model,
-        vmax=io_max,
-    )
-    fig.colorbar(im0, ax=axs[0, 0], label="flux")
-    axs[0, 0].set_title("Io Initial Distribution")
-
-    im1 = plot_io(
-        axs[0, 1],
         fin_dist,
         roll_angle_degrees=roll_angle_degrees,
         model=model,
         vmax=io_max,
+        cmap=cmap,
+    )
+    fig.colorbar(im0, ax=axs[0, 0], label="flux")
+    axs[0, 0].set_title("Io Recovered Distribution")
+
+    blurred = blur_distribution(true_model)
+    im1 = plot_io(
+        axs[0, 1],
+        blurred,
+        roll_angle_degrees=roll_angle_degrees,
+        model=true_model,
+        vmax=io_max,
+        cmap=cmap,
     )
     fig.colorbar(im1, ax=axs[0, 1], label="flux")
-    axs[0, 1].set_title("Io Recovered Distribution")
+    axs[0, 1].set_title("Blurred Truth Distribution")
 
     # Plot true distribution
     im2 = plot_io(
         axs[0, 2],
-        truth,
+        true_model.distribution,
         roll_angle_degrees=roll_angle_degrees,
-        model=model,
+        model=true_model,
         vmax=io_max,
+        cmap=cmap,
     )
     fig.colorbar(im2, ax=axs[0, 2], label="flux")
     axs[0, 2].set_title(f"True Distribution")
 
-    # Plot final gradient state
-    try:
-        grads = (
-            opt_state[0]["0"].inner_state[0][0].volcanoes
-        )  # TODO this is wrong maybe
-        # im3 = axs[1, 0].imshow(grads, **get_residual_bounds(grads), extent=extents)
-        im3 = plot_io(
-            axs[1, 0],
-            grads,
-            roll_angle_degrees=roll_angle_degrees,
-            model=model,
-            **get_residual_bounds(grads),
-            show_diff_lim=False,
-            bg_color="white",
-        )
-        fig.colorbar(im3, ax=axs[1, 0], label="flux / iter")
-        axs[1, 0].set_title(f"Final Gradient State. Loss: {losses[-1]:.1f}")
-    except:
-        print("bruh")
+    # Plot initial distribution
+    im3 = plot_io(
+        axs[1, 0],
+        initial_distribution,
+        roll_angle_degrees=roll_angle_degrees,
+        model=model,
+        vmax=io_max,
+        cmap=cmap,
+    )
+    fig.colorbar(im3, ax=axs[1, 0], label="flux")
+    axs[1, 0].set_title("Initial Distribution")
 
     # Plot final residuals
-    io_resids, bound_dict = get_residuals(fin_dist, truth, return_bounds=True)
-    # im4 = axs[1, 1].imshow(io_resids, **bound_dict, extent=extents)
+    io_resids, bound_dict = get_residuals(fin_dist, blurred, return_bounds=True)
     im4 = plot_io(
         axs[1, 1],
         io_resids,
@@ -466,13 +464,22 @@ def plot_io_with_truth(
         bg_color="white",
     )
     fig.colorbar(im4, ax=axs[1, 1], label="flux")
-    axs[1, 1].set_title(f"Final Residuals. Loss: {losses[-1]:.1f}")
+    axs[1, 1].set_title(f"Comparison to Blurred Truth")
 
-    axs[1, 2].imshow(np.zeros((1, 1)), cmap="Greys")
-    axs[1, 2].set(
-        xticks=[],
-        yticks=[],
+
+    # Plot final residuals
+    io_resids, bound_dict = get_residuals(fin_dist, true_model.distribution, return_bounds=True)
+    im5 = plot_io(
+        axs[1, 2],
+        io_resids,
+        roll_angle_degrees=roll_angle_degrees,
+        model=model,
+        **bound_dict,
+        show_diff_lim=False,
+        bg_color="white",
     )
+    fig.colorbar(im5, ax=axs[1, 2], label="flux")
+    axs[1, 2].set_title(f"Final Residuals. Loss: {losses[-1]:.1f}")
 
     model_imgs = model_fn(model, ngroups=ngroups)
 
@@ -514,7 +521,6 @@ def plot_io_with_truth(
 
 
 def plot_diffraction_limit(model, ax=None, OOP=False):
-    pscale = model.optics.psf_pixel_scale / model.optics.oversample
     diff_lim = dlu.rad2arcsec(model.source.wavelengths.mean() / model.optics.diameter)
     scale_length = diff_lim
 
