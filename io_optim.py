@@ -61,12 +61,12 @@ config = {
 }
 
 # outputting
-output_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/output/"
+output_dir = "/scratch/user/uqmchar4/code/jwst-io/outputs/outs/"
 
 # model
 ngroups = 3
-model_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/bfe/"
-filter_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/data/niriss_filters/"
+model_dir = "/scratch/user/uqmchar4/data/jwst/bfe/"
+filter_dir = "/scratch/user/uqmchar4/data/jwst/niriss_filters/"
 
 """Saving stuff"""
 
@@ -139,7 +139,7 @@ params["source"] = ComplexIoSource(
     # distribution=canon_io.data,
     spectrum=get_filter_spectrum(
         filt,
-        file_path="/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/data/niriss_filters/",
+        file_path=filter_dir,
     ),
 )
 
