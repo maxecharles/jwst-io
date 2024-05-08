@@ -7,8 +7,8 @@
 #SBATCH --time=0:10:00
 #SBATCH --partition=general
 #SBATCH --account=a_astro
-#SBATCH --output=output/amigo_test.out
-#SBATCH --error=output/out.error
+#SBATCH --output=output/io_optim.out
+#SBATCH --error=output/io_optim.error
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=max.charles@sydney.edu.au
 
