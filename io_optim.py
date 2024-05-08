@@ -188,6 +188,8 @@ final_model, losses, params_out, opt_state = optimise(
     nan_method="none",
 )
 
+print(save_dir)
+
 """Plotting"""
 plot_params(np.array(losses), params_out, save=save_dir, true_model=true_model)
 
