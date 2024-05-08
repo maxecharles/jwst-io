@@ -7,10 +7,11 @@
 #SBATCH --time=0:10:00
 #SBATCH --partition=general
 #SBATCH --account=a_astro
-#SBATCH --output=output/io_optim.out
-#SBATCH --error=output/io_optim.error
+#SBATCH --output=outputs/io_optim.out
+#SBATCH --error=outputs/io_optim.error
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=max.charles@sydney.edu.au
+#SBATCH --array=0-15
 
 # Load the necessary modules
 module load anaconda3
@@ -25,4 +26,4 @@ pip install git+https://git@github.com/itroitskaya/dLuxWebbpsf.git@import_fix -q
 pip install git+https://git@github.com/fmartinache/xara.git -q
 
 # Run the python script
-srun --unbuffered python /scratch/user/uqmchar4/code/jwst-io/io_optim.py 0 >> output/io_optim.out
+srun --unbuffered python /scratch/user/uqmchar4/code/jwst-io/io_optim.py $SLURM_ARRAY_TASK_ID >> output/io_optim.out

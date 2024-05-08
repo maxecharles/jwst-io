@@ -87,8 +87,9 @@ def save_script_to_txt(save_dir: str):
         output_file.write(script_content)
 
 
-now = lambda: datetime.datetime.now().strftime("%H.%M.%S_%d:%m:%Y")
-save_dir = output_dir + now() + "/"
+# now = lambda: datetime.datetime.now().strftime("%H.%M.%S_%d:%m:%Y")
+# save_dir = output_dir + now() + "/"
+save_dir = output_dir + f"L1_{L1_index}/"
 
 # creating save directory
 if not os.path.exists(save_dir):
