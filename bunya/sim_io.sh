@@ -11,7 +11,7 @@
 #SBATCH --error=outputs/io_optim.error
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=max.charles@sydney.edu.au
-#SBATCH --array=0-15
+#SBATCH --array=0-8
 
 # Load the necessary modules
 module load anaconda3

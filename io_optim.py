@@ -42,7 +42,7 @@ L1_weights = np.logspace(-2, 5, 8)
 
 """Changing stuff"""
 # optimisation
-n_epoch = 60
+n_epoch = 150
 L1 = L1_weights[L1_index]
 # L1 = 0.0e0
 print("L1:", L1)
