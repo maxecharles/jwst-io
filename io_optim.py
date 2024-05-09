@@ -38,7 +38,7 @@ parser.add_argument("L1_index", help="index of the job", type=int)
 args = parser.parse_args()
 L1_index = args.L1_index
 
-L1_weights = np.logspace(-5, 9, 15)
+L1_weights = np.logspace(-2, 5, 8)
 
 """Changing stuff"""
 # optimisation

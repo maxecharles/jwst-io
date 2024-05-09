@@ -49,8 +49,10 @@ def norm_fn(model, args={}):
 
 
 def L1_loss(model):
-    dist = model.get("distribution")
-    return np.sqrt(np.nansum(np.abs(dist)))
+    # Basically un-normalising it to calculate L1
+    # No need to absolute value as all positive
+    volcanoes = 10**model.source.log_volcanoes
+    return np.nansum(model.source.volc_contrast * volcanoes)
 
 
 def loss_fn(model, args={}):
