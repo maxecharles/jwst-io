@@ -142,8 +142,8 @@ def format_fn(params_out, param, ax, alpha=0.75, true_model=None):
     elif param == "volc_contrast":
         ax.plot(arr)
         ax.set(ylabel="Volcano Contrast")
-        if truth:
-            ax.axhline(true_model.volc_contrast, color="r", linestyle="--")
+        # if truth:
+        #     ax.axhline(true_model.volc_contrast, color="r", linestyle="--")
 
     elif param == "positions" or param == "position":
         arr = arr.reshape(arr.shape[0], -1)

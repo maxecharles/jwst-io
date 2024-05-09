@@ -53,7 +53,7 @@ config = {
     "log_flux": optax.adam(delay(5e-3, 0), b1=0.7),
     # # "position": optax.adam(delay(5e-4, 0), b1=0.7),
     # # "log_flux": optax.adam(delay(2e-3, 0), b1=0.7),
-    "volc_contrast": optax.adam(delay(2e-3, 0), b1=0.7),
+    "volc_frac": optax.adam(delay(2e-3, 0), b1=0.7),
     "log_volcanoes": optax.adam(delay(5e-2, 10), b1=0.7),
     # "distribution": optax.adam(delay(5e-6, 50), b1=0.7),
     # "optics.coefficients": opt(1e3, 10),
@@ -135,7 +135,7 @@ params["detector"] = detector
 params["source"] = ComplexIoSource(
     position=jr.uniform(key, (2,), minval=-0.5, maxval=0.5),
     log_flux=jr.uniform(key, (1,), minval=6.9, maxval=7.1),
-    volc_contrast=1e-1,
+    volc_frac=1e-1,
     log_volcanoes=np.log10(io.volcanoes / io.volcanoes.sum() + eps),
     # distribution=canon_io.data,
     spectrum=get_filter_spectrum(
@@ -157,7 +157,7 @@ initial_model = true_model.set(
         "position",
         "log_flux",
         "log_volcanoes",
-        "volc_contrast",
+        "volc_frac",
         # "distribution",
         "optics.coefficients",
         "one_on_fs",

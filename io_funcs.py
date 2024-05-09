@@ -78,18 +78,18 @@ class BaseIoSource(Source):
 
 
 class SimpleIoSource(BaseIoSource):
-    distribution: Array
+    log_distribution: Array
 
     def __init__(
         self: Source,
         position: Array | tuple = np.zeros(2),  # arcseconds
         log_flux: Array | float = 7.0,
-        distribution: Array = None,
+        log_distribution: Array = None,
         wavelengths: Array = None,
         weights: Array = None,
         spectrum: Spectrum() = None,
     ):
-        self.distribution = np.array(distribution, dtype=float)
+        self.log_distribution = np.array(log_distribution, dtype=float)
 
         super().__init__(
             position=position,
@@ -99,9 +99,17 @@ class SimpleIoSource(BaseIoSource):
             spectrum=spectrum,
         )
 
+    @property
+    def distribution(self: Source) -> Array:
+        """
+        Returns the normalised intensity distribution of the source.
+        """
+        distribution = np.power(10, self.log_distribution)
+        return distribution / distribution.sum()
+
 
 class ComplexIoSource(BaseIoSource):
-    volc_contrast: Array | float
+    volc_frac: Array | float
     log_volcanoes: Array
     disk: Array
 
@@ -109,7 +117,7 @@ class ComplexIoSource(BaseIoSource):
         self: Source,
         position: Array | tuple = np.zeros(2),  # arcseconds
         log_flux: Array | float = 7.0,
-        volc_contrast: Array | float = 1e-2,
+        volc_frac: Array | float = 1e-2,
         log_volcanoes: Array = None,
         disk: Array = None,
         wavelengths: Array = None,
@@ -132,7 +140,7 @@ class ComplexIoSource(BaseIoSource):
 
         self.position = np.array(position, dtype=float)  # arcseconds
         self.log_flux = np.array(log_flux, dtype=float)
-        self.volc_contrast = np.array(volc_contrast, dtype=float)
+        self.volc_frac = np.array(volc_frac, dtype=float)
 
         super().__init__(
             position=position,
@@ -157,8 +165,8 @@ class ComplexIoSource(BaseIoSource):
         source intensity distribution which also sums to 1.
         """
         return (
-            1.0 - self.volc_contrast
-        ) * self.disk.data + self.volc_contrast * self.volcanoes
+            1.0 - self.volc_frac
+        ) * self.disk.data + self.volc_frac * self.volcanoes
 
     def model(
         self: Source,
@@ -182,8 +190,8 @@ class ComplexIoSource(BaseIoSource):
         volcanoes = np.power(10, np.array(self.log_volcanoes))
         volcanoes /= volcanoes.sum()
         distribution = (
-            1.0 - self.volc_contrast
-        ) * self.disk.data + self.volc_contrast * volcanoes
+            1.0 - self.volc_frac
+        ) * self.disk.data + self.volc_frac * volcanoes
 
         # Returning wf is a special case
         if return_wf:
