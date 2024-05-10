@@ -44,38 +44,6 @@ class BaseIoSource(Source):
 
         super().__init__(wavelengths=wavelengths, weights=weights, spectrum=spectrum)
 
-    def model(
-        self: Source,
-        optics: Optics = None,
-        return_wf: bool = False,
-        return_psf: bool = False,
-    ) -> Array:
-        if return_wf and return_psf:
-            raise ValueError(
-                "return_wf and return_psf cannot both be True. " "Please choose one."
-            )
-
-        weights = self.weights * (10**self.log_flux)
-
-        # Note we always return wf here so we can convolve each wavelength
-        # individually if a chromatic wavefront output is required.
-        wf = optics.propagate(
-            self.wavelengths, dlu.arcsec2rad(self.position), weights, return_wf=True
-        )
-
-        # Returning wf is a special case
-        if return_wf:
-            conv_fn = lambda psf: convolve(psf, self.distribution, mode="same")
-            return wf.set("amplitude", vmap(conv_fn)(wf.psf) ** 0.5)
-
-        # Return psf object
-        conv_psf = convolve(wf.psf.sum(0), self.distribution, mode="same")
-        if return_psf:
-            return PSF(conv_psf, wf.pixel_scale.mean())
-
-        # Return array psf
-        return conv_psf
-
 
 class SimpleIoSource(BaseIoSource):
     log_distribution: Array
@@ -106,6 +74,41 @@ class SimpleIoSource(BaseIoSource):
         """
         distribution = np.power(10, self.log_distribution)
         return distribution / distribution.sum()
+
+    def model(
+        self: Source,
+        optics: Optics = None,
+        return_wf: bool = False,
+        return_psf: bool = False,
+    ) -> Array:
+        if return_wf and return_psf:
+            raise ValueError(
+                "return_wf and return_psf cannot both be True. " "Please choose one."
+            )
+
+        weights = self.weights * (10**self.log_flux)
+
+        # Note we always return wf here so we can convolve each wavelength
+        # individually if a chromatic wavefront output is required.
+        wf = optics.propagate(
+            self.wavelengths, dlu.arcsec2rad(self.position), weights, return_wf=True
+        )
+
+        distribution = np.power(10, self.log_distribution)
+        distribution = distribution / distribution.sum()
+
+        # Returning wf is a special case
+        if return_wf:
+            conv_fn = lambda psf: convolve(psf, distribution, mode="same")
+            return wf.set("amplitude", vmap(conv_fn)(wf.psf) ** 0.5)
+
+        # Return psf object
+        conv_psf = convolve(wf.psf.sum(0), distribution, mode="same")
+        if return_psf:
+            return PSF(conv_psf, wf.pixel_scale.mean())
+
+        # Return array psf
+        return conv_psf
 
 
 class ComplexIoSource(BaseIoSource):
@@ -164,9 +167,7 @@ class ComplexIoSource(BaseIoSource):
         Assuming the disk and volcanoes array sum to 1, this property returns the
         source intensity distribution which also sums to 1.
         """
-        return (
-            1.0 - self.volc_frac
-        ) * self.disk.data + self.volc_frac * self.volcanoes
+        return (1.0 - self.volc_frac) * self.disk.data + self.volc_frac * self.volcanoes
 
     def model(
         self: Source,

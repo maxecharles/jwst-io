@@ -38,11 +38,12 @@ parser.add_argument("L1_index", help="index of the job", type=int)
 args = parser.parse_args()
 L1_index = args.L1_index
 
-L1_weights = np.logspace(-2, 5, 8)
 
 """Changing stuff"""
 # optimisation
 n_epoch = 150
+
+L1_weights = np.logspace(-1.5, 1.5, 8)
 L1 = L1_weights[L1_index]
 # L1 = 0.0e0
 print("L1:", L1)
@@ -89,7 +90,7 @@ def save_script_to_txt(save_dir: str):
 
 # now = lambda: datetime.datetime.now().strftime("%H.%M.%S_%d:%m:%Y")
 # save_dir = output_dir + now() + "/"
-save_dir = output_dir + f"L1_{L1_index}/"
+save_dir = output_dir + f"L1_{L1:.2f}/"
 
 # creating save directory
 if not os.path.exists(save_dir):
