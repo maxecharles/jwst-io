@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=1024G
 #SBATCH --job-name=amigo
-#SBATCH --time=0:10:00
+#SBATCH --time=0:30:00
 #SBATCH --partition=general
 #SBATCH --account=a_astro
 #SBATCH --output=outputs/io_optim.out
