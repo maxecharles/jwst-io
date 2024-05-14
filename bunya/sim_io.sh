@@ -26,4 +26,4 @@ pip install git+https://git@github.com/itroitskaya/dLuxWebbpsf.git@import_fix -q
 pip install git+https://git@github.com/fmartinache/xara.git -q
 
 # Run the python script
-srun --unbuffered python /scratch/user/uqmchar4/code/jwst-io/io_optim.py $SLURM_ARRAY_TASK_ID >> output/io_optim.out
+srun --unbuffered python /scratch/user/uqmchar4/code/jwst-io/io_optim.py $SLURM_ARRAY_TASK_ID >> outputs/io_optim.out

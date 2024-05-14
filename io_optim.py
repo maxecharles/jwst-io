@@ -41,7 +41,7 @@ L1_index = args.L1_index
 
 """Changing stuff"""
 # optimisation
-n_epoch = 150
+n_epoch = 200
 
 L1_weights = np.logspace(-1.5, 1.5, 8)
 L1 = L1_weights[L1_index]
@@ -62,7 +62,7 @@ config = {
 }
 
 # outputting
-output_dir = "/scratch/user/uqmchar4/code/jwst-io/outputs/outs/"
+output_dir = "/scratch/user/uqmchar4/code/jwst-io/outputs/"
 
 # model
 ngroups = 3
