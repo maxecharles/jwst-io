@@ -20,7 +20,7 @@ def norm_fn(model, args={}):
         The source object with the normalised spectrum and distribution.
     """
     spectrum = model.spectrum.normalise()
-    volc_contrast = np.maximum(model.volc_contrast, 0.0)
+    volc_frac = np.maximum(model.volc_frac, 0.0)
     # distribution = np.maximum(model.distribution, 0.0)
     distribution = np.maximum(model.volcanoes, 0.0)
     # distribution = model.volcanoes
@@ -34,12 +34,12 @@ def norm_fn(model, args={}):
         [
             "spectrum",
             "volcanoes",
-            "volc_contrast",
+            "volc_frac",
         ],
         [
             spectrum,
             distribution,
-            volc_contrast,
+            volc_frac,
         ],
     )
 
@@ -52,7 +52,7 @@ def L1_loss(model):
     # Basically un-normalising it to calculate L1
     # No need to absolute value as all positive
     volcanoes = 10**model.source.log_volcanoes
-    return np.nansum(model.source.volc_contrast * volcanoes)
+    return np.nansum(model.source.volc_frac * volcanoes)
 
 
 def loss_fn(model, args={}):
@@ -104,7 +104,7 @@ def complex_norm_fn(model, args={}):
         The source object with the normalised spectrum and distribution.
     """
     spectrum = model.spectrum.normalise()
-    volc_contrast = np.clip(model.volc_contrast, 0.0, 1.0)
+    volc_frac = np.clip(model.volc_frac, 0.0, 1.0)
 
     volcanoes = np.power(10, model.log_volcanoes)
     volcanoes /= volcanoes.sum()
@@ -119,12 +119,12 @@ def complex_norm_fn(model, args={}):
     return model.set(
         [
             "spectrum",
-            "volc_contrast",
+            "volc_frac",
             "log_volcanoes",
         ],
         [
             spectrum,
-            volc_contrast,
+            volc_frac,
             log_volcanoes,
         ],
     )
