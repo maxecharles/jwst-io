@@ -62,7 +62,7 @@ config = {
 }
 
 # outputting
-output_dir = "/scratch/user/uqmchar4/code/jwst-io/outputs/"
+output_dir = "/scratch/user/uqmchar4/code/jwst-io/bunya/outputs/"
 
 # model
 ngroups = 3
@@ -208,3 +208,5 @@ plot_io_with_truth(
     true_model=true_model,
     save=save_dir,
     )
+
+print("0")
