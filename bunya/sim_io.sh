@@ -3,10 +3,10 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=1024G
-#SBATCH --job-name=amigo
+#SBATCH --job-name=l1_reg
 #SBATCH --time=1:00:00
 #SBATCH --partition=general
-#SBATCH --account=l1_reg
+#SBATCH --account=a_astro
 #SBATCH --output=bunya/outputs/io_optim.out
 #SBATCH --error=bunya/outputs/io_optim.error
 #SBATCH --mail-type=BEGIN,END,FAIL
