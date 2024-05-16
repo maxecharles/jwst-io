@@ -43,7 +43,7 @@ L1_index = args.L1_index
 # optimisation
 n_epoch = 200
 
-L1_weights = np.logspace(-1.5, 1.5, 8)
+L1_weights = np.linspace(1, 2, 8)
 L1 = L1_weights[L1_index]
 # L1 = 0.0e0
 print("L1:", L1)
@@ -168,7 +168,7 @@ initial_model = true_model.set(
         true_model.log_flux - 0.1,
         np.log10(initialise_disk(normalise=True)),
         # true_model.volcanoes,
-        0.1,
+        0.3,
         # np.zeros_like(true_model.optics.coefficients),
         true_model.optics.coefficients,
         # np.zeros_like(true_model.one_on_fs),

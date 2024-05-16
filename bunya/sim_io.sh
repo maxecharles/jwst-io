@@ -4,13 +4,13 @@
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=1024G
 #SBATCH --job-name=amigo
-#SBATCH --time=1:30:00
+#SBATCH --time=1:00:00
 #SBATCH --partition=general
-#SBATCH --account=a_astro
+#SBATCH --account=l1_reg
 #SBATCH --output=bunya/outputs/io_optim.out
 #SBATCH --error=bunya/outputs/io_optim.error
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=max.charles@sydney.edu.au
+#SBATCH --mail-user=uqmchar4@uq.edu.au
 #SBATCH --array=0-8
 
 # Load the necessary modules
