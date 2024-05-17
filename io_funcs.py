@@ -95,7 +95,7 @@ class SimpleIoSource(BaseIoSource):
         )
 
         distribution = np.power(10, self.log_distribution)
-        distribution = distribution / distribution.sum()
+        # distribution = distribution / distribution.sum()
 
         # Returning wf is a special case
         if return_wf:

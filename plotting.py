@@ -128,6 +128,11 @@ def format_fn(params_out, param, ax, alpha=0.75, true_model=None):
         ax.set(ylabel="Source Distribution")
         ax.axhline(0, color="k", linestyle="--")
 
+    if param == "log_distribution":
+        arr = arr.reshape(arr.shape[0], -1)
+        ax.plot(arr, alpha=0.05, linewidth=1)
+        ax.set(ylabel="Log Source Distribution")
+
     elif param == "volcanoes":
         arr = arr.reshape(arr.shape[0], -1)
         ax.plot(arr, alpha=0.05, linewidth=1)

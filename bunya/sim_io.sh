@@ -3,7 +3,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=1024G
-#SBATCH --job-name=l1_reg
+#SBATCH --job-name=regs
 #SBATCH --time=1:00:00
 #SBATCH --partition=general
 #SBATCH --account=a_astro
@@ -11,7 +11,7 @@
 #SBATCH --error=bunya/outputs/io_optim.error
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=uqmchar4@uq.edu.au
-#SBATCH --array=0-8
+#SBATCH --array=0-30
 
 # Load the necessary modules
 module load anaconda3

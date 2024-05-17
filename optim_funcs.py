@@ -48,25 +48,43 @@ def norm_fn(model, args={}):
 #     return grads.set('distribution', np.where(args['mask'], grads, args['mask']))
 
 
-
 def L1_loss(model):
     return np.nansum(model.source.volc_frac * np.abs(10**model.source.log_volcanoes))
+
+
+def L2_loss(model):
+    return np.nansum(model.distribution**2)
+
 
 def TV_loss(model):
     # TODO check if this is right
     # Calculate differences along the x and y axes
     d_x = np.diff(model.distribution, axis=1)
     d_y = np.diff(model.distribution, axis=0)
-    
+
     # Calculate the sum of absolute differences
-    return np.sum(np.abs(d_x)) + np.sum(np.abs(d_y))
+    return np.sqrt(d_x**2 + d_y**2)
+
+
+def ME_loss(model):
+    flat = model.distribution.ravel()
+    hist, _ = np.histogram(flat, bins=100)
+    P = hist / hist.sum()
+    S = np.nansum(P * np.log(P))
+    return -S
+
 
 def loss_fn(model, args={}):
     data = args["data"]
     ramp = args["model_fn"](model, ngroups=args["ngroups"])
     loss = np.log10(-jsp.stats.norm.logpdf(ramp, data).sum())
-    loss += args["L1"] * L1_loss(model)  # L1
-    # loss += args["TV"] * TV_loss(model)  # L1
+
+    # looping over regularisation coefficients and functions
+    for reg in args['reg_dict'].keys():
+        coeff, func = args['reg_dict'][reg], args['reg_func_dict'][reg]
+        if coeff is not None and coeff != 0.:
+            loss = loss + coeff * func(model)
+            
     return loss
 
 
@@ -81,7 +99,10 @@ def simple_norm_fn(model, args={}):
         The source object with the normalised spectrum and distribution.
     """
     spectrum = model.spectrum.normalise()
-    distribution = np.maximum(model.distribution, 0.0)    
+
+    dist = 10 ** model.log_distribution
+    dist = dist / dist.sum()
+    log_distribution = np.log10(dist)
 
     # # applying mask
     # distribution = np.where(args['mask'], distribution, args['mask'])
@@ -91,13 +112,13 @@ def simple_norm_fn(model, args={}):
     return model.set(
         [
             "spectrum",
-            "distribution",
-            ],
+            "log_distribution",
+        ],
         [
             spectrum,
-            distribution,
-            ],
-        )
+            log_distribution,
+        ],
+    )
 
 
 def complex_norm_fn(model, args={}):
@@ -111,12 +132,12 @@ def complex_norm_fn(model, args={}):
         The source object with the normalised spectrum and distribution.
     """
     spectrum = model.spectrum.normalise()
-    volc_frac = np.clip(model.volc_frac, 0., 1.)
+    volc_frac = np.clip(model.volc_frac, 0.0, 1.0)
 
     volcanoes = np.power(10, model.log_volcanoes)
     volcanoes /= volcanoes.sum()
 
-    log_volcanoes = np.log10(volcanoes)    
+    log_volcanoes = np.log10(volcanoes)
 
     # # applying mask
     # volcanoes = np.where(args['mask'], volcanoes, args['mask'])
@@ -128,21 +149,17 @@ def complex_norm_fn(model, args={}):
             "spectrum",
             "volc_frac",
             "log_volcanoes",
-            ],
+        ],
         [
             spectrum,
             volc_frac,
             log_volcanoes,
-            ],
-        )
+        ],
+    )
 
 
 def grad_fn(grads, args={}, optimisers={}):
     return grads.set("distribution", np.where(args["mask"], grads, args["mask"]))
-
-
-def maxent_loss(model):
-    pass
 
 
 delay = lambda lr, s: optax.piecewise_constant_schedule(lr * 1e-16, {s: 1e16})
