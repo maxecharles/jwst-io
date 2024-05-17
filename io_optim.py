@@ -36,9 +36,9 @@ jax.config.update("jax_enable_x64", True)
 
 """Changing stuff"""
 # optimisation
-n_epoch = 30
+n_epoch = 200
 
-coeffs = np.logspace(-1.5, 1.5, 10)
+coeffs = np.logspace(-2, 2, 10)
 
 config = {
     # # Crude solver
@@ -54,22 +54,21 @@ config = {
 }
 
 # outputting
-# output_dir = "/scratch/user/uqmchar4/code/jwst-io/bunya/outputs/"
-output_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/output/"
+output_dir = "/scratch/user/uqmchar4/code/jwst-io/bunya/outputs/"
+# output_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/output/"
 
 # model
 ngroups = 3
-# model_dir = "/scratch/user/uqmchar4/data/jwst/bfe/"
-# filter_dir = "/scratch/user/uqmchar4/data/jwst/niriss_filters/"
-model_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/bfe/"
-filter_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/data/niriss_filters/"
+model_dir = "/scratch/user/uqmchar4/data/jwst/bfe/"
+filter_dir = "/scratch/user/uqmchar4/data/jwst/niriss_filters/"
+# model_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/bfe/"
+# filter_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/data/niriss_filters/"
 
 """Argument parsing"""
-# parser = argparse.ArgumentParser()
-# parser.add_argument("reg_index", help="index of the job", type=int)
-# args = parser.parse_args()
-# reg_index = args.reg_index
-reg_index = 5
+parser = argparse.ArgumentParser()
+parser.add_argument("reg_index", help="index of the job", type=int)
+args = parser.parse_args()
+reg_index = args.reg_index
 
 """Setting up regularisation"""
 chunks = [
