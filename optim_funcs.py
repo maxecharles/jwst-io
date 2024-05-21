@@ -63,21 +63,20 @@ def TV_loss(model):
     d_y = np.diff(model.distribution, axis=0)
 
     # Calculate the sum of absolute differences
-    return np.sqrt(d_x**2 + d_y**2)
+    return np.sum(np.abs(d_x) + np.abs(d_y))
 
 
 def ME_loss(model):
-    flat = model.distribution.ravel()
-    hist, _ = np.histogram(flat, bins=100)
-    P = hist / hist.sum()
-    S = np.nansum(P * np.log(P))
+    p = model.distribution
+    p /= p.sum()
+    S = np.nansum(p * np.log(p))
     return -S
 
 
 def loss_fn(model, args={}):
     data = args["data"]
     ramp = args["model_fn"](model, ngroups=args["ngroups"])
-    loss = np.log10(-jsp.stats.norm.logpdf(ramp, data).sum())
+    loss = np.log10(-jsp.stats.norm.logpdf(ramp, data).sum())  # Add errors
 
     # looping over regularisation coefficients and functions
     for reg in args['reg_dict'].keys():

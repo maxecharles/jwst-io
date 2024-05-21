@@ -283,6 +283,7 @@ class HD2236(Source):
             return_psf,
         )
 
+
 class DefinitelyRealIo:
     def __init__(
         self,
@@ -421,11 +422,13 @@ class DefinitelyRealIo:
 
     @property
     def distribution(self):
+        terminator_and_disk = np.where(
+            self.ill_mask, self.disk.data * self.darkness, self.disk.data
+        )
 
-        terminator_and_disk = np.where(self.ill_mask, self.disk.data * self.darkness, self.disk.data)
-
-        return (1.0 - self.volc_frac) * terminator_and_disk + self.volc_frac * self.volcanoes
-
+        return (
+            1.0 - self.volc_frac
+        ) * terminator_and_disk + self.volc_frac * self.volcanoes
 
 
 def io_model_fn(model, exposure, with_BFE=True, to_BFE=False, zero_idx=-1, noise=True):

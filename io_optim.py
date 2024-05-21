@@ -122,7 +122,7 @@ if not os.path.exists(save_dir):
 save_script_to_txt(save_dir)  # saving copy of script to save directory
 
 """Load data."""
-io = DefinitelyRealIo(night_day_ratio=1, volc_contrast=1e-2, seed=2, n_volcanoes=3)
+io = DefinitelyRealIo(night_day_ratio=1, volc_frac=0.2, seed=2, n_volcanoes=3)
 
 """Set up the model."""
 BFE = deserialise(model_dir + "PolyBFE_trained.zdx")
@@ -158,7 +158,7 @@ params["detector"] = detector
 params["source"] = SimpleIoSource(
     position=jr.uniform(key, (2,), minval=-0.5, maxval=0.5),
     log_flux=jr.uniform(key, (1,), minval=6.9, maxval=7.1),
-    log_distribution=np.log10(io.data),
+    log_distribution=np.log10(io.distribution),
     spectrum=get_filter_spectrum(filt, file_path=filter_dir),
 )
 # params["source"] = ComplexIoSource(
