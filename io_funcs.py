@@ -283,7 +283,6 @@ class HD2236(Source):
             return_psf,
         )
 
-
 class DefinitelyRealIo:
     def __init__(
         self,
@@ -293,7 +292,7 @@ class DefinitelyRealIo:
         darkness=None,
         R=1.1519 / 2,
         R_volc=1e-2,
-        volc_contrast=1.0,
+        volc_frac=0.7,
         pixel_scale=0.065524085,
         oversample=4,
         seed=None,
@@ -321,7 +320,7 @@ class DefinitelyRealIo:
         self.R_volc = R_volc
         self.pixel_scale = pixel_scale
         self.oversample = oversample
-        self.volc_contrast = volc_contrast
+        self.volc_frac = volc_frac
 
         if n_volcanoes is None:
             n_volcanoes = rd.randint(1, 10)
@@ -421,11 +420,12 @@ class DefinitelyRealIo:
         return volcanoes / volcanoes.sum()
 
     @property
-    def data(self):
-        return (
-            np.where(self.ill_mask, self.disk.data * self.darkness, self.disk.data)
-            + self.volc_contrast * self.volcanoes
-        )
+    def distribution(self):
+
+        terminator_and_disk = np.where(self.ill_mask, self.disk.data * self.darkness, self.disk.data)
+
+        return (1.0 - self.volc_frac) * terminator_and_disk + self.volc_frac * self.volcanoes
+
 
 
 def io_model_fn(model, exposure, with_BFE=True, to_BFE=False, zero_idx=-1, noise=True):
