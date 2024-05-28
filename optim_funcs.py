@@ -9,46 +9,8 @@ def bias_prior(model, mean=80, std=50):
     return jsp.stats.norm.logpdf(bias_vec, loc=mean, scale=std).sum()
 
 
-def norm_fn(model, args={}):
-    """
-    Method for returning a new source object with a normalised total
-    spectrum and source distribution.
-
-    Returns
-    -------
-    source : Source
-        The source object with the normalised spectrum and distribution.
-    """
-    spectrum = model.spectrum.normalise()
-    volc_frac = np.maximum(model.volc_frac, 0.0)
-    # distribution = np.maximum(model.distribution, 0.0)
-    distribution = np.maximum(model.volcanoes, 0.0)
-    # distribution = model.volcanoes
-
-    # applying mask
-    distribution = np.where(args["mask"], distribution, args["mask"])
-    if distribution.sum != 0:
-        distribution /= distribution.sum()
-
-    return model.set(
-        [
-            "spectrum",
-            "volcanoes",
-            "volc_frac",
-        ],
-        [
-            spectrum,
-            distribution,
-            volc_frac,
-        ],
-    )
-
-
-# def grad_fn(grads, args={}, optimisers={}):
-#     return grads.set('distribution', np.where(args['mask'], grads, args['mask']))
-
-
 def L1_loss(model):
+    # only applied to the volcano array
     return np.nansum(model.source.volc_frac * np.abs(10**model.source.log_volcanoes))
 
 
@@ -57,34 +19,53 @@ def L2_loss(model):
 
 
 def TV_loss(model):
-    # TODO check if this is right
-    # Calculate differences along the x and y axes
-    d_x = np.diff(model.distribution, axis=1)
-    d_y = np.diff(model.distribution, axis=0)
+    array = np.pad(model.distribution, 2)
+    diff_y = np.abs(array[1:, :] - array[:-1, :]).sum()
+    diff_x = np.abs(array[:, 1:] - array[:, :-1]).sum()
+    return diff_x + diff_y
 
-    # Calculate the sum of absolute differences
-    return np.sum(np.abs(d_x) + np.abs(d_y))
+def QV_loss(model):
+    array = np.pad(model.distribution, 2)
+    diff_y = np.square(array[1:, :] - array[:-1, :]).sum()
+    diff_x = np.square(array[:, 1:] - array[:, :-1]).sum()
+    return diff_x + diff_y
 
 
-def ME_loss(model):
-    p = model.distribution
-    p /= p.sum()
-    S = np.nansum(p * np.log(p))
+def ME_loss(model, eps=1e-16):
+    """
+    Maximum Entropy loss function.
+    """
+    P = model.distribution / np.nansum(model.distribution)
+    S = np.nansum(P * np.log(P + eps))
     return -S
 
 
-def loss_fn(model, args={}):
-    data = args["data"]
-    ramp = args["model_fn"](model, ngroups=args["ngroups"])
-    loss = np.log10(-jsp.stats.norm.logpdf(ramp, data).sum())  # Add errors
+def posterior(model, exposure, model_fn, per_pix=True, return_vec=False, return_im=False, **kwargs):
+    # Get the model
+    slopes = model_fn(model, exposure, **kwargs)
 
-    # looping over regularisation coefficients and functions
-    for reg in args['reg_dict'].keys():
-        coeff, func = args['reg_dict'][reg], args['reg_func_dict'][reg]
-        if coeff is not None and coeff != 0.:
-            loss = loss + coeff * func(model)
-            
-    return loss
+    # Return vector
+    if return_vec:
+        return exposure.log_likelihood(slopes)
+
+    # return image
+    if return_im:
+        return exposure.log_likelihood(slopes, return_im=True)
+
+    # Return mean or sum
+    posterior = exposure.log_likelihood(slopes)
+    if per_pix:
+        return np.nanmean(posterior)
+    return np.nansum(posterior)
+
+
+def loss_fn(model, args, **kwargs):
+    return -np.array(
+        [
+            posterior(model, exposure=exp, model_fn=args['model_fn'], per_pix=True, **kwargs)
+            for exp in args['exposures']
+        ]
+    ).sum()
 
 
 def simple_norm_fn(model, args={}):
@@ -157,11 +138,20 @@ def complex_norm_fn(model, args={}):
     )
 
 
-def grad_fn(grads, args={}, optimisers={}):
-    return grads.set("distribution", np.where(args["mask"], grads, args["mask"]))
+def grad_fn(model, grads, args, optimiser):
+    for step_mapper in args['step_mappers']:
+        grads = step_mapper.apply(grads)
+    return grads
 
 
-delay = lambda lr, s: optax.piecewise_constant_schedule(lr * 1e-16, {s: 1e16})
-opt = lambda lr, start: optax.sgd(delay(lr, start), nesterov=True, momentum=0.5)
-adam_opt = lambda lr, start: optax.adam(delay(lr, start))
-clip = lambda optimiser, v: optax.chain(optimiser, optax.clip(v))
+def scheduler(lr, start, *args):
+    shed_dict = {start: 1e100}
+    for start, mul in args:
+        shed_dict[start] = mul
+    return optax.piecewise_constant_schedule(lr / 1e100, shed_dict)
+
+base_sgd = lambda vals: optax.sgd(vals, nesterov=True, momentum=0.6)
+base_adam = lambda vals, **kwargs: optax.adam(vals, **kwargs)
+
+sgd = lambda lr, start, *schedule: base_sgd(scheduler(lr, start, *schedule))
+adam = lambda lr, start, *schedule, **kwargs: base_adam(scheduler(lr, start, *schedule), **kwargs)

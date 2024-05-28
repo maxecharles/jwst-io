@@ -13,7 +13,7 @@ import numpy as onp
 from numpy import random as rd
 
 from amigo.misc import planck
-from amigo.detector_layers import model_ramp
+from amigo.detector_layers import model_ramp, model_dark_current
 from amigo.stats import total_amplifier_noise
 
 from matplotlib import colormaps
@@ -462,7 +462,18 @@ def io_model_fn(model, exposure, with_BFE=True, to_BFE=False, zero_idx=-1, noise
 
     # Apply the detector model and turn it into a ramp
     psf = model.detector.model(PSF)
+
+    # Model the ramp
     ramp = model_ramp(psf, exposure.ngroups)
+
+    # Add the bias - Method 2, estimate from data
+    bias_est = exposure.zero_point - exposure.data[0]
+    bias_est = np.repeat(np.repeat(bias_est, 4, axis=0), 4, axis=1) / 16
+    bias_est = np.where(np.isnan(bias_est), 0.0, bias_est)
+
+    # Add the estimated bias to the ramp
+    ramp += bias_est[None, ...]
+
     if to_BFE:
         return ramp
 
@@ -474,18 +485,26 @@ def io_model_fn(model, exposure, with_BFE=True, to_BFE=False, zero_idx=-1, noise
         ramp = vmap(dsample_fn)(ramp)
     ramp = vmap(dlu.resize, (0, None))(ramp, 80)
 
-    # Apply bias and one of F correction
+    # Model the dark current
+    ramp = model_dark_current(ramp, model.detector.dark_current)
+
+    # Apply one of F model
     if noise:
-        # ramp += total_read_noise(model.biases[key], model.one_on_fs[key])
         ramp += total_amplifier_noise(model.one_on_fs[key])
 
     # return ramp
     return np.diff(ramp, axis=0)
 
 
-def sim_io_model_fn(model, ngroups, to_BFE=False, noise=True):
-    source = model.source
+def sim_io_model_fn(model, ngroups, to_BFE=False, noise=True, return_ramp=False):
+    source = model.source.set(
+        [],
+        [],
+    )
+
+
     optics = model.optics
+
 
     PSF = source.model(optics, return_psf=True)
 
@@ -505,7 +524,10 @@ def sim_io_model_fn(model, ngroups, to_BFE=False, noise=True):
         # ramp += total_read_noise(model.biases[key], model.one_on_fs[key])
         ramp += total_amplifier_noise(model.one_on_fs)
 
-    # return ramp
+    if return_ramp:
+        return ramp
+    
+    # return slope
     return np.diff(ramp, axis=0)
 
 
@@ -615,3 +637,15 @@ def blur_distribution(model, extent=0.15):
 
     distribution = jsp.signal.convolve2d(model.distribution, kernel, mode="same")
     return distribution / distribution.sum()
+
+
+# Set params
+def set_all_params(exposures, value):
+    param_dict = {}
+    for exp in exposures:
+        param_dict[exp.key] = value
+    return param_dict
+
+
+def grab_first_value(model, param):
+    return list(model.get(param).values())[0]

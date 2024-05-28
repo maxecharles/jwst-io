@@ -9,6 +9,7 @@ from io_funcs import blur_distribution
 
 from matplotlib import pyplot as plt, colormaps
 from matplotlib.transforms import Affine2D
+from matplotlib.colors import PowerNorm
 
 inferno = colormaps["inferno"]
 viridis = colormaps["viridis"]
@@ -152,13 +153,13 @@ def format_fn(params_out, param, ax, alpha=0.75, true_model=None):
 
     elif param == "positions" or param == "position":
         arr = arr.reshape(arr.shape[0], -1)
-        ax.plot(arr - arr[0])
+        ax.plot(arr)
         ax.set(ylabel="Position (arcsec)")
         if truth:
-            for idx, pos in enumerate(true_model.position):
-                ax.axhline(pos - arr[0][idx], color="r", linestyle="--")
+            for pos in true_model.position:
+                ax.axhline(pos, color="r", linestyle="--")
 
-    elif param == "log_flux" or param == 'log_fluxes':
+    elif param == "log_flux" or param == 'log_fluxes' or param == 'fluxes':
         arr = arr.reshape(arr.shape[0], -1)
         ax.plot(arr)
         ax.set(ylabel="Flux (photons)")
@@ -171,7 +172,7 @@ def format_fn(params_out, param, ax, alpha=0.75, true_model=None):
         ax.plot(arr - arr[0], alpha=0.25)
         ax.set(ylabel="Aberrations (nm)")
 
-    elif "OneOnFs" in param:
+    elif "one_on_fs" in param:
         arr = arr.reshape(arr.shape[0], -1)
         ax.plot(arr - arr[0], alpha=0.25)
         ax.set(ylabel="OneOnFs")
@@ -274,12 +275,20 @@ def prep_observations_for_plot(params_out):
     prepped_params_out = {}
     for p, observations in zip(params_out.params.keys(), params_out.params.values()):
         obs_list = []
-        for obs in observations.values():
-            obs_array = np.array([np.array(i) for i in obs])
-            if len(obs_array.shape) < 2:
-                obs_array = obs_array.reshape(-1, 1)
-            obs_list.append(obs_array)
-        prepped_params_out[p] = np.hstack(np.array([*obs_list]))
+        if type(observations) == dict:
+            for obs in observations.values():
+                obs = np.array(obs)
+                if len(obs.shape) < 2:
+                    obs = obs.reshape(-1, 1)
+                # print(obs_array.shape)
+                obs_list.append(obs)
+            prepped_params_out[p] = np.hstack(np.array([*obs_list]))
+            
+        elif type(observations) == list:
+            obs = np.array(observations)
+            if len(obs.shape) < 2:
+                obs = obs.reshape(-1, 1)
+            prepped_params_out[p] = obs
 
     return prepped_params_out
 
@@ -365,6 +374,7 @@ def plot_io(
     },
     vmin: float = 0.0,
     vmax: float = None,
+    power=0.5,
 ):
     rotation_transform = Affine2D().rotate_deg(
         roll_angle_degrees
@@ -380,8 +390,7 @@ def plot_io(
         array,
         cmap=cmap,
         extent=get_arcsec_extents(pixel_scale, array.shape),
-        vmin=vmin,
-        vmax=vmax,
+        norm=PowerNorm(power, vmin=vmin, vmax=vmax),
     )
 
     trans_data = rotation_transform + ax.transData  # creating transformation
@@ -393,7 +402,7 @@ def plot_io(
 def plot_io_with_truth(
     model,
     model_fn,
-    data,
+    exposures,
     losses,
     ngroups,
     opt_state,
@@ -467,6 +476,7 @@ def plot_io_with_truth(
         **bound_dict,
         show_diff_lim=False,
         bg_color="white",
+        power=1.,
     )
     fig.colorbar(im4, ax=axs[1, 1], label="flux")
     axs[1, 1].set_title(f"Comparison to Blurred Truth")
@@ -482,11 +492,12 @@ def plot_io_with_truth(
         **bound_dict,
         show_diff_lim=False,
         bg_color="white",
+        power=1.,
     )
     fig.colorbar(im5, ax=axs[1, 2], label="flux")
     axs[1, 2].set_title(f"Final Residuals. Loss: {losses[-1]:.1f}")
 
-    model_imgs = model_fn(model, ngroups=ngroups)
+    model_imgs = model_fn(model, exposures[0])
 
     for grp_idx, grp_no in enumerate(np.arange(-1, 1)):
         im5 = axs[2 + grp_idx, 0].imshow(
@@ -500,7 +511,7 @@ def plot_io_with_truth(
         axs[2 + grp_idx, 0].set_yticks([0, fin_dist.shape[1] - 1])
 
         im6 = axs[2 + grp_idx, 1].imshow(
-            data[grp_no],
+            exposures[0].data[grp_no],
             cmap="cividis",
             vmin=0,
         )
@@ -510,7 +521,7 @@ def plot_io_with_truth(
         axs[2 + grp_idx, 1].set_yticks([0, fin_dist.shape[1] - 1])
 
         residuals, bound_dict = get_residuals(
-            model_imgs[grp_no], data[grp_no], return_bounds=True
+            model_imgs[grp_no], exposures[0].data[grp_no], return_bounds=True
         )
         im7 = axs[2 + grp_idx, 2].imshow(residuals, **bound_dict)
         fig.colorbar(im7, ax=axs[2 + grp_idx, 2], label="flux")
