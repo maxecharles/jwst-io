@@ -21,7 +21,7 @@ source $EBROOTANACONDA3/etc/profile.d/conda.sh
 conda activate dlux
 
 # Print the environemnts
-pip install --upgrade --no-deps --force-reinstall git+ssh://git@github.com/LouisDesdoigts/amigo.git@dev -q
+pip install --upgrade --no-deps --force-reinstall git+ssh://git@github.com/LouisDesdoigts/amigo.git@mc_custom_model -q
 pip install git+https://git@github.com/itroitskaya/dLuxWebbpsf.git@import_fix -q
 pip install git+https://git@github.com/fmartinache/xara.git -q
 
