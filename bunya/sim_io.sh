@@ -11,7 +11,7 @@
 #SBATCH --error=bunya/outputs/io_optim.error
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=uqmchar4@uq.edu.au
-#SBATCH --array=0-30
+#SBATCH --array=0-61
 
 # Load the necessary modules
 module load anaconda3
