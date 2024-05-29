@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=1024G
 #SBATCH --job-name=regs
-#SBATCH --time=1:00:00
+#SBATCH --time=0:20:00
 #SBATCH --partition=general
 #SBATCH --account=a_astro
 #SBATCH --output=bunya/outputs/io_optim.out
