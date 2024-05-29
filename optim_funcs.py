@@ -15,13 +15,15 @@ def L1_loss(model):
 
 
 def L2_loss(model):
-    return np.nansum(model.distribution**2)
+    # TODO BRUH THIS NORMALISED
+    return np.nansum((model.distribution - model.distribution.mean())**2)
 
 
 def TV_loss(model):
     array = np.pad(model.distribution, 2)
     diff_y = np.abs(array[1:, :] - array[:-1, :]).sum()
     diff_x = np.abs(array[:, 1:] - array[:, :-1]).sum()
+    # return np.hypot(diff_x, diff_y)
     return diff_x + diff_y
 
 
@@ -37,7 +39,7 @@ def ME_loss(model, eps=1e-16):
     Maximum Entropy loss function.
     """
     P = model.distribution / np.nansum(model.distribution)
-    S = np.nansum(P * np.log(P + eps))
+    S = np.nansum(-P * np.log(P + eps))
     return -S
 
 
