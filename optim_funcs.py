@@ -24,6 +24,7 @@ def TV_loss(model):
     diff_x = np.abs(array[:, 1:] - array[:, :-1]).sum()
     return diff_x + diff_y
 
+
 def QV_loss(model):
     array = np.pad(model.distribution, 2)
     diff_y = np.square(array[1:, :] - array[:-1, :]).sum()
@@ -40,7 +41,9 @@ def ME_loss(model, eps=1e-16):
     return -S
 
 
-def posterior(model, exposure, model_fn, per_pix=True, return_vec=False, return_im=False, **kwargs):
+def posterior(
+    model, exposure, model_fn, per_pix=True, return_vec=False, return_im=False, **kwargs
+):
     # Get the model
     slopes = model_fn(model, exposure, **kwargs)
 
@@ -60,12 +63,19 @@ def posterior(model, exposure, model_fn, per_pix=True, return_vec=False, return_
 
 
 def loss_fn(model, args, **kwargs):
-    return -np.array(
-        [
-            posterior(model, exposure=exp, model_fn=args['model_fn'], per_pix=True, **kwargs)
-            for exp in args['exposures']
-        ]
-    ).sum()
+    posteriors = [
+        posterior(
+            model, exposure=exp, model_fn=args["model_fn"], per_pix=True, **kwargs
+        )
+        for exp in args["exposures"]
+    ]
+    loss = -np.array(posteriors).sum()
+
+    # regularisation
+    for reg in args["reg_dict"].keys():
+        loss += args["reg_dict"][reg] * args["reg_func_dict"][reg](model)
+
+    return loss
 
 
 def simple_norm_fn(model, args={}):
@@ -80,7 +90,7 @@ def simple_norm_fn(model, args={}):
     """
     spectrum = model.spectrum.normalise()
 
-    dist = 10 ** model.log_distribution
+    dist = 10**model.log_distribution
     dist = dist / dist.sum()
     log_distribution = np.log10(dist)
 
@@ -139,7 +149,7 @@ def complex_norm_fn(model, args={}):
 
 
 def grad_fn(model, grads, args, optimiser):
-    for step_mapper in args['step_mappers']:
+    for step_mapper in args["step_mappers"]:
         grads = step_mapper.apply(grads)
     return grads
 
@@ -150,8 +160,11 @@ def scheduler(lr, start, *args):
         shed_dict[start] = mul
     return optax.piecewise_constant_schedule(lr / 1e100, shed_dict)
 
+
 base_sgd = lambda vals: optax.sgd(vals, nesterov=True, momentum=0.6)
 base_adam = lambda vals, **kwargs: optax.adam(vals, **kwargs)
 
 sgd = lambda lr, start, *schedule: base_sgd(scheduler(lr, start, *schedule))
-adam = lambda lr, start, *schedule, **kwargs: base_adam(scheduler(lr, start, *schedule), **kwargs)
+adam = lambda lr, start, *schedule, **kwargs: base_adam(
+    scheduler(lr, start, *schedule), **kwargs
+)
