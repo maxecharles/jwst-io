@@ -48,11 +48,11 @@ coeffs = np.logspace(-3, 2, 15)
 config = {
     "positions": sgd(1e-1, 0),
     "fluxes": sgd(3.5e-1, 0),
-    "log_distribution": adam(5e-1, 2, (6, 0.3), b1=0.7),
+    "log_distribution": adam(5e-1, 2, (6, 0.3), (30, 0.2), b1=0.7),
     # "volc_frac": adam(5e-2, 5, b1=0.7),
     # "log_volcanoes": adam(5e-1, 2, (6, 0.3), b1=0.7),
-    "aberrations": sgd(0 * 1e-2, 9),
-    "one_on_fs": sgd(0 * 2e-1, 5),
+    "aberrations": sgd(0*1e-2, 9),
+    "one_on_fs": sgd(0*2e-1, 5),
     # "optics.coefficients": opt(1e3, 10),
 }
 
@@ -153,8 +153,10 @@ def save_script_to_txt(save_dir: str):
     with open(output_file_path, "w") as output_file:
         output_file.write(script_content)
 
-
-save_dir = output_dir + f"{list(reg_dict.keys())[0]}_{list(reg_dict.values())[0]:.2f}/"
+if len(reg_dict.keys()) == 0:
+    save_dir = output_dir + "no_reg/"
+else:
+    save_dir = output_dir + f"{list(reg_dict.keys())[0]}_{list(reg_dict.values())[0]:.4f}/"
 
 # creating save directory
 if not os.path.exists(save_dir):
