@@ -6,6 +6,9 @@ from jax import Array, vmap, numpy as np, random as jr, scipy as jsp
 import numpy as onp
 
 from io_funcs import blur_distribution
+from volcanoes import volcanoes
+
+import planetmapper
 
 from matplotlib import pyplot as plt, colormaps
 from matplotlib.transforms import Affine2D
@@ -20,97 +23,124 @@ viridis.set_bad("k", 0.5)
 seismic.set_bad("k", 0.5)
 
 
+def plot_ephemeris(ax, legend=False):
+    body = io_on_that_day(n_volc=10)
+
+    body.plot_wireframe_angular(
+        ax,
+        add_title=False,
+        label_poles=True,
+        indicate_equator=True,
+        indicate_prime_meridian=False,
+        grid_interval=15,
+        grid_lat_limit=75,
+        aspect_adjustable="box",
+        formatting={
+            "limb": {
+                "linestyle": "--",
+                "linewidth": 0.8,
+                "alpha": 0.8,
+                "color": "white",
+            },
+            "grid": {
+                "linestyle": "--",
+                "linewidth": 0.5,
+                "alpha": 0.8,
+                "color": "white",
+            },
+            "equator": {"linewidth": 1, "color": "r", "label": "equator"},
+            "terminator": {
+                "linewidth": 1,
+                "linestyle": "-",
+                "color": "aqua",
+                "alpha": 0.7,
+                "label": "terminator",
+            },
+            "coordinate_of_interest_lonlat": {
+                "color": "g",
+                "marker": "^",
+                "s": 50,
+                "label": "volcano",
+            },
+            # 'limb_illuminated': {'color': 'b'},
+        },
+    )
+
+    if legend:
+        handles, labels = plt.gca().get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        plt.legend(
+            by_label.values(),
+            by_label.keys(),
+            loc="upper left",
+        )
+
+
 def plotting_io_comparison(
-    model, model_fn, opt_state, exposures, losses, initial_distribution=None
+    model,
+    initial_distribution,
+    save: str = None,
+    roll_angle_degrees=0.0,
+    cmap="afmhot_10u",
+    eph_cmap="gist_gray",
+    io_max=None,
+    power=0.5,
 ):
     fin_dist = model.source.distribution
 
-    try:
-        grads = (
-            opt_state[0]["0"].inner_state[0][0].trace.distribution
-        )  # TODO this is wrong maybe
-    except:
-        grads = np.zeros_like(fin_dist)
-    nrows = 1 + 2 * len(exposures)
+    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(12, 3))
 
-    plt.figure(figsize=(15, 3 * nrows))
-    plt.subplot(nrows, 4, 1)
-    plt.imshow(
-        initial_distribution, cmap="afmhot_10u", vmin=0, vmax=np.nanmax(fin_dist)
+    # Plot initial distribution
+    im0 = plot_io(
+        axs[0],
+        initial_distribution,
+        roll_angle_degrees=roll_angle_degrees,
+        model=model,
+        vmax=io_max,
+        cmap=cmap,
+        power=power,
     )
-    plt.colorbar(label="flux")
-    plt.title("Io Initial Distribution")
-    plt.xticks([0, fin_dist.shape[0] - 1])
-    plt.yticks([0, fin_dist.shape[1] - 1])
+    fig.colorbar(im0, ax=axs[0], label="flux")
+    axs[0].set_title("Initial Distribution")
 
-    if np.nanmin(fin_dist) < 0:
-        rec_vmin = None
-    else:
-        rec_vmin = 0
-    plt.subplot(nrows, 4, 2)
-    plt.imshow(fin_dist, cmap="afmhot_10u", vmin=rec_vmin, vmax=np.nanmax(fin_dist))
-    plt.colorbar(label="flux")
-    plt.title("Io Recovered Distribution")
-    plt.xticks([0, fin_dist.shape[0] - 1])
-    plt.yticks([0, fin_dist.shape[1] - 1])
+    im1 = plot_io(
+        axs[1],
+        fin_dist,
+        roll_angle_degrees=roll_angle_degrees,
+        model=model,
+        vmax=io_max,
+        cmap=cmap,
+        power=power,
+    )
 
-    plt.subplot(nrows, 4, 3)
-    plt.imshow(grads, **get_residual_bounds(grads))
-    plt.colorbar(label="flux / iter")
-    plt.title(f"Final Gradient State. Loss: {losses[-1]:.1f}")
-    plt.xticks([0, fin_dist.shape[0] - 1])
-    plt.yticks([0, fin_dist.shape[1] - 1])
+    fig.colorbar(im1, ax=axs[1], label="flux")
+    axs[1].set_title("Io Recovered Distribution")
 
-    for exp_idx, exp in enumerate(exposures):
-        model_imgs = model_fn(model, exp)
-
-        for grp_idx, grp_no in enumerate(np.arange(-1, 1)):
-            plt.subplot(nrows, 4, 5 + 4 * grp_idx + 8 * exp_idx)
-            plt.imshow(
-                model_imgs[grp_no],
-                cmap="cividis",
-                vmin=0,
-            )
-            plt.colorbar(label="flux")
-            plt.title(f"Model Image. Exp:{exp_idx}, Grp:{grp_no}")
-            plt.xticks([0, fin_dist.shape[0] - 1])
-            plt.yticks([0, fin_dist.shape[1] - 1])
-
-            plt.subplot(nrows, 4, 6 + 4 * grp_idx + 8 * exp_idx)
-            plt.imshow(
-                exp.data[grp_no],
-                cmap="cividis",
-                vmin=0,
-            )
-            plt.colorbar(label="flux")
-            plt.title(f"Data. Exp:{exp_idx}, Grp:{grp_no}")
-            plt.xticks([0, fin_dist.shape[0] - 1])
-            plt.yticks([0, fin_dist.shape[1] - 1])
-
-            residuals, bound_dict = get_residuals(
-                model_imgs[grp_no], exp.data[grp_no], return_bounds=True
-            )
-            plt.subplot(nrows, 4, 7 + 4 * grp_idx + 8 * exp_idx)
-            plt.imshow(residuals, **bound_dict)
-            plt.colorbar(label="flux")
-            plt.title(f"Residuals. Exp:{exp_idx}, Grp:{grp_no}")
-            plt.xticks([0, fin_dist.shape[0] - 1])
-            plt.yticks([0, fin_dist.shape[1] - 1])
-
-            llim = exp.loglike_im(model_imgs)
-            plt.subplot(nrows, 4, 8 + 4 * grp_idx + 8 * exp_idx)
-            plt.imshow(-llim)
-            plt.colorbar()
-            plt.title(f"Neg Log Likelihood")
-            plt.xticks([0, model_imgs[grp_no].shape[0] - 1])
-            plt.yticks([0, model_imgs[grp_no].shape[1] - 1])
+    # Plot initial distribution
+    plot_ephemeris(
+        axs[2],
+    )
+    im2 = plot_io(
+        axs[2],
+        fin_dist,
+        roll_angle_degrees=roll_angle_degrees,
+        model=model,
+        vmax=io_max,
+        cmap=eph_cmap,
+        power=2,
+    )
+    fig.colorbar(im2, ax=axs[2], label="flux")
+    axs[2].set_title("With Ephemeris")
 
     plt.tight_layout()
-    plt.show()
+    if save is not None:
+        plt.savefig(f"{save}result.pdf")
+        plt.close()
+    else:
+        plt.show()
 
 
 def format_fn(params_out, param, ax, alpha=0.75, true_model=None):
-
     if true_model is not None:
         truth = True
     else:
@@ -153,13 +183,13 @@ def format_fn(params_out, param, ax, alpha=0.75, true_model=None):
 
     elif param == "positions" or param == "position":
         arr = arr.reshape(arr.shape[0], -1)
-        ax.plot(arr)
+        ax.plot(arr - arr[0])
         ax.set(ylabel="Position (arcsec)")
         if truth:
             for pos in true_model.position:
                 ax.axhline(pos, color="r", linestyle="--")
 
-    elif param == "log_flux" or param == 'log_fluxes' or param == 'fluxes':
+    elif param == "log_flux" or param == "log_fluxes" or param == "fluxes":
         arr = arr.reshape(arr.shape[0], -1)
         ax.plot(arr)
         ax.set(ylabel="Flux (photons)")
@@ -223,7 +253,13 @@ def format_fn(params_out, param, ax, alpha=0.75, true_model=None):
 
 
 def plot_params(
-    losses, params_out, format_fn=format_fn, k=10, l=-1, save: str = None, true_model=None, 
+    losses,
+    params_out,
+    format_fn=format_fn,
+    k=10,
+    l=-1,
+    save: str = None,
+    true_model=None,
 ):
     plt.figure(figsize=(9, 3))
     plt.subplot(1, 2, 1)
@@ -271,7 +307,6 @@ def plot_params(
 
 
 def prep_observations_for_plot(params_out):
-
     prepped_params_out = {}
     for p, observations in zip(params_out.params.keys(), params_out.params.values()):
         obs_list = []
@@ -283,7 +318,7 @@ def prep_observations_for_plot(params_out):
                 # print(obs_array.shape)
                 obs_list.append(obs)
             prepped_params_out[p] = np.hstack(np.array([*obs_list]))
-            
+
         elif type(observations) == list:
             obs = np.array(observations)
             if len(obs.shape) < 2:
@@ -294,10 +329,8 @@ def prep_observations_for_plot(params_out):
 
 
 def prep_sim_params_for_plot(params_out):
-
     prepped_params_out = {}
     for param, value in zip(params_out.params.keys(), params_out.params.values()):
-
         value = np.array(value)
 
         if len(value.shape) > 2:
@@ -308,46 +341,47 @@ def prep_sim_params_for_plot(params_out):
     return prepped_params_out
 
 
-def plotting_cal_comparison(model, exposures, model_fn):
-
+def plotting_data_comparison(model, exposures, model_fn, power=0.5):
     nrows = 2 * len(exposures)
 
-    plt.figure(figsize=(15, 3*nrows))
+    plt.figure(figsize=(15, 3 * nrows))
 
     for exp_idx, exp in enumerate(exposures):
-        
         model_imgs = model_fn(model, exp)
 
-        for grp_idx, grp_no in enumerate(np.arange(-1, 1)):
-            plt.subplot(nrows, 4, 1 + 4*grp_idx + 8*exp_idx)
-            plt.imshow(model_imgs[grp_no], cmap=inferno, vmin=0,)
-            plt.colorbar()
-            plt.title(f"Model Image. Exp:{exp_idx}, Grp:{grp_no}")
-            plt.xticks([0, model_imgs[grp_no].shape[0]-1])
-            plt.yticks([0, model_imgs[grp_no].shape[1]-1])
-
-            plt.subplot(nrows, 4, 2 + 4*grp_idx + 8*exp_idx)
-            plt.imshow(exp.data[grp_no], cmap=inferno, vmin=0,)
+        for grp_idx, grp_no in enumerate(np.array([0, -1])):
+            plt.subplot(nrows, 4, 1 + 4 * grp_idx + 8 * exp_idx)
+            plt.imshow(exp.data[grp_no], cmap=inferno, norm=PowerNorm(power, vmin=0))
             plt.colorbar(label=None)
             plt.title(f"Data. Exp:{exp_idx}, Grp:{grp_no}")
-            plt.xticks([0, model_imgs[grp_no].shape[0]-1])
-            plt.yticks([0, model_imgs[grp_no].shape[1]-1])
+            plt.xticks([0, model_imgs[grp_no].shape[0] - 1])
+            plt.yticks([0, model_imgs[grp_no].shape[1] - 1])
 
-            residuals, bound_dict = get_residuals(model_imgs[grp_no], exp.data[grp_no], return_bounds=True)
-            plt.subplot(nrows, 4, 3 + 4*grp_idx + 8*exp_idx)
+            plt.subplot(nrows, 4, 2 + 4 * grp_idx + 8 * exp_idx)
+            plt.imshow(model_imgs[grp_no], cmap=inferno, norm=PowerNorm(power, vmin=0))
+            plt.colorbar()
+            plt.title(f"Model Image. Exp:{exp_idx}, Grp:{grp_no}")
+            plt.xticks([0, model_imgs[grp_no].shape[0] - 1])
+            plt.yticks([0, model_imgs[grp_no].shape[1] - 1])
+
+            residuals, bound_dict = get_residuals(
+                exp.data[grp_no], model_imgs[grp_no], return_bounds=True
+            )
+            plt.subplot(nrows, 4, 3 + 4 * grp_idx + 8 * exp_idx)
             plt.imshow(residuals, **bound_dict)
             plt.colorbar(label="flux")
             plt.title(f"Residuals. Exp:{exp_idx}, Grp:{grp_no}")
-            plt.xticks([0, model_imgs[grp_no].shape[0]-1])
-            plt.yticks([0, model_imgs[grp_no].shape[1]-1])
+            plt.xticks([0, model_imgs[grp_no].shape[0] - 1])
+            plt.yticks([0, model_imgs[grp_no].shape[1] - 1])
 
-            llim = exp.loglike_im(model_imgs)
-            plt.subplot(nrows, 4, 4 + 4*grp_idx + 8*exp_idx)
-            plt.imshow(-llim, cmap=viridis)
+            nnim = residuals / np.sqrt(exp.variance[grp_no])
+            bound_dict = get_residual_bounds(nnim)
+            plt.subplot(nrows, 4, 4 + 4 * grp_idx + 8 * exp_idx)
+            plt.imshow(nnim, **bound_dict)
             plt.colorbar()
-            plt.title(f"Neg Log Likelihood")
-            plt.xticks([0, model_imgs[grp_no].shape[0]-1])
-            plt.yticks([0, model_imgs[grp_no].shape[1]-1])
+            plt.title(f"Noise Normalised Residuals")
+            plt.xticks([0, model_imgs[grp_no].shape[0] - 1])
+            plt.yticks([0, model_imgs[grp_no].shape[1] - 1])
 
     plt.show()
 
@@ -476,14 +510,15 @@ def plot_io_with_truth(
         **bound_dict,
         show_diff_lim=False,
         bg_color="white",
-        power=1.,
+        power=1.0,
     )
     fig.colorbar(im4, ax=axs[1, 1], label="flux")
     axs[1, 1].set_title(f"Comparison to Blurred Truth")
 
-
     # Plot final residuals
-    io_resids, bound_dict = get_residuals(fin_dist, true_model.distribution, return_bounds=True)
+    io_resids, bound_dict = get_residuals(
+        fin_dist, true_model.distribution, return_bounds=True
+    )
     im5 = plot_io(
         axs[1, 2],
         io_resids,
@@ -492,7 +527,7 @@ def plot_io_with_truth(
         **bound_dict,
         show_diff_lim=False,
         bg_color="white",
-        power=1.,
+        power=1.0,
     )
     fig.colorbar(im5, ax=axs[1, 2], label="flux")
     axs[1, 2].set_title(f"Final Residuals. Loss: {losses[-1]:.1f}")
@@ -572,6 +607,78 @@ def plot_diffraction_limit(model, ax=None, OOP=False):
             r"$\lambda / D$",
             color="hotpink",
             fontsize=8,
+        )
+
+
+def io_on_that_day(
+    n_volc="all", body="io", date="2022-08-01T16:52:00.000", observer="jwst", **kwargs
+):
+    """
+    Use this with body.plot_wireframe_angular to plot the body on a map.
+    """
+    body = planetmapper.Body(body, date, observer=observer, **kwargs)
+
+    if n_volc == "all":
+        n_volc = len(volcanoes)
+    body.coordinates_of_interest_lonlat = volcanoes[:n_volc]
+
+    return body
+
+
+def plot_io_with_ephemeris(
+    ax, array, roll_angle_degrees=246.80584209034947, legend=False, **kwargs
+):
+    body = io_on_that_day(n_volc=10)
+
+    plot_io(ax, array, roll_angle_degrees, show_diff_lim=True, **kwargs)
+
+    body.plot_wireframe_angular(
+        ax,
+        add_title=False,
+        label_poles=True,
+        indicate_equator=True,
+        indicate_prime_meridian=False,
+        grid_interval=15,
+        grid_lat_limit=75,
+        aspect_adjustable="box",
+        formatting={
+            "limb": {
+                "linestyle": "--",
+                "linewidth": 0.8,
+                "alpha": 0.8,
+                "color": "white",
+            },
+            "grid": {
+                "linestyle": "--",
+                "linewidth": 0.5,
+                "alpha": 0.8,
+                "color": "white",
+            },
+            "equator": {"linewidth": 1, "color": "r", "label": "equator"},
+            "terminator": {
+                "linewidth": 1,
+                "linestyle": "-",
+                "color": "aqua",
+                "alpha": 0.7,
+                "label": "terminator",
+            },
+            "coordinate_of_interest_lonlat": {
+                "color": "g",
+                "marker": "^",
+                "s": 50,
+                "label": "volcano",
+            },
+            # 'limb_illuminated': {'color': 'b'},
+        },
+    )
+
+    if legend:
+        handles, labels = plt.gca().get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        plt.legend(
+            by_label.values(),
+            by_label.keys(),
+            loc="upper left",
         )
 
 

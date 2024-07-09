@@ -444,8 +444,8 @@ def io_model_fn(model, exposure, with_BFE=True, to_BFE=False, zero_idx=-1, noise
     # weights *= 10 ** (model.log_fluxes[key]) / weights.sum()
 
     source = model.source.set(
-        ["position", "log_flux", "wavelengths", "weights"],
-        [model.positions[key], model.log_fluxes[key], wavels, weights],
+        ["position", "log_flux"],
+        [model.positions[key], model.fluxes[key]],
     )
 
     # Apply correct aberrations
