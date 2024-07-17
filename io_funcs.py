@@ -12,9 +12,9 @@ from astropy import units as u
 import numpy as onp
 from numpy import random as rd
 
-from amigo.misc import planck
-from amigo.detector_layers import model_ramp, model_dark_current
-from amigo.stats import total_amplifier_noise
+# from amigo.misc import planck
+# from amigo.detector_layers import model_ramp, model_dark_current
+# from amigo.stats import total_amplifier_noise
 
 from matplotlib import colormaps
 
