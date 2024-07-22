@@ -14,13 +14,17 @@ from amgio import (
 jax.config.update("jax_enable_x64", True)
 
 ###################################################################################################
-n_epoch = 2
+n_epoch = 60
 
 coeffs = np.logspace(-3, 3, 15)
 
-output_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/output/"
-model_cache = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/arrays/"
-data_cache = "/Users/mcha5804/JWST/ERS1373/calslope_18/"
+# output_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/output/"
+# model_cache = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/arrays/"
+# data_cache = "/Users/mcha5804/JWST/ERS1373/calslope_18/"
+
+output_dir = "/scratch/user/uqmchar4/data/jwst/io_outputs"
+model_cache = "/scratch/user/uqmchar4/data/jwst/arrays"
+data_cache = "/scratch/user/uqmchar4/data/jwst/JWST/ERS1373/calslope_18"
 
 ###################################################################################################
 
