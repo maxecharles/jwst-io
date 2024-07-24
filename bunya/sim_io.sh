@@ -18,7 +18,7 @@ module load anaconda3
 source $EBROOTANACONDA3/etc/profile.d/conda.sh
 
 # Activate the conda environment
-conda activate dlux
+conda activate amigo
 
 # Print the environemnts
 pip install --upgrade --no-deps --force-reinstall git+ssh://git@github.com/LouisDesdoigts/amigo.git@dev -q
