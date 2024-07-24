@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=1024G
 #SBATCH --job-name=regs
-#SBATCH --time=1:00:00
+#SBATCH --time=0:05:00
 #SBATCH --partition=general
 #SBATCH --account=a_astro
 #SBATCH --output=bunya/outputs/io_optim.out
@@ -26,4 +26,4 @@ pip install git+https://git@github.com/itroitskaya/dLuxWebbpsf.git@import_fix -q
 pip install git+https://git@github.com/fmartinache/xara.git -q
 
 # Run the python script
-srun --unbuffered python /scratch/user/uqmchar4/code/jwst-io/reg_grid.py $SLURM_ARRAY_TASK_ID >> bunya/outputs/io_optim.out
+srun --unbuffered python /scratch/user/uqmchar4/code/jwst-io/reg_grid.py $SLURM_ARRAY_TASK_ID >> outputs/io_optim.out
