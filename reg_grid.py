@@ -22,9 +22,9 @@ coeffs = np.logspace(-3, 3, 15)
 # model_cache = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/arrays/"
 # data_cache = "/Users/mcha5804/JWST/ERS1373/calslope_18/"
 
-output_dir = "/scratch/user/uqmchar4/data/jwst/io_outputs"
-model_cache = "/scratch/user/uqmchar4/data/jwst/arrays"
-data_cache = "/scratch/user/uqmchar4/data/jwst/JWST/ERS1373/calslope_18"
+output_dir = "/scratch/user/uqmchar4/data/jwst/io_outputs/"
+model_cache = "/scratch/user/uqmchar4/data/jwst/arrays/"
+data_cache = "/scratch/user/uqmchar4/data/jwst/JWST/ERS1373/calslope_18/"
 
 ###################################################################################################
 
