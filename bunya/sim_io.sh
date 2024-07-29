@@ -4,14 +4,14 @@
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=1024G
 #SBATCH --job-name=regs
-#SBATCH --time=0:30:00
+#SBATCH --time 1:30:00
 #SBATCH --partition=general
 #SBATCH --account=a_astro
 #SBATCH --output=/scratch/user/uqmchar4/code/jwst-io/bunya/outputs/io_optim.out
 #SBATCH --error=/scratch/user/uqmchar4/code/jwst-io/bunya/outputs/io_optim.error
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=uqmchar4@uq.edu.au
-#SBATCH --array=0-1
+#SBATCH --array=0-61
 
 # Load the necessary modules
 module load anaconda3
