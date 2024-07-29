@@ -5,7 +5,7 @@ from amgio import models, model_fits
 from zodiax.experimental import deserialise
 
 
-def build_io_model(files: list, model_cache: str):
+def build_io_model(files: list, model_cache: str, initial_distributions: list | None = None):
 
     ramp_coeffs = np.load(model_cache + "ramp_coeffs.npy")
 
@@ -32,13 +32,24 @@ def build_io_model(files: list, model_cache: str):
     params = amigo.files.initialise_params(exposures, optics)
 
     source_size = 100  # in oversampled pixels
-    ones = np.ones((source_size, source_size))
-    log_distribution = np.log10(ones / ones.sum())
 
-    log_distributions = {}
-    for exp in exposures:
-        dist_key = exp.get_key("log_distribution")
-        log_distributions[dist_key] = log_distribution
+    if initial_distributions is None:
+        ones = np.ones((source_size, source_size))
+        log_distribution = np.log10(ones / ones.sum())
+
+        log_distributions = {}
+        for exp in exposures:
+            dist_key = exp.get_key("log_distribution")
+            log_distributions[dist_key] = log_distribution
+
+    else:
+        if len(initial_distributions) != len(exposures):
+            raise ValueError("Initial distributions must be the same length as exposures")
+        
+        log_distributions = {}
+        for dist, exp in zip(initial_distributions, exposures):
+            dist_key = exp.get_key("log_distribution")
+            log_distributions[dist_key] = dist
 
     params["log_distribution"] = log_distributions
 
