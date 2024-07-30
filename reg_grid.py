@@ -14,7 +14,7 @@ from amgio import (
 jax.config.update("jax_enable_x64", True)
 
 ###################################################################################################
-n_epoch = 6
+n_epoch = 80
 
 coeffs = np.logspace(-3, 3, 15)
 
