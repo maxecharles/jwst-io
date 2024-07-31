@@ -16,7 +16,7 @@ jax.config.update("jax_enable_x64", True)
 ###################################################################################################
 n_epoch = 80
 
-coeffs = np.logspace(-3, 3, 15)
+coeffs = np.hstack((np.array([0.,]) , np.logspace(0, 5, 14)))
 
 # output_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/output/"
 # model_cache = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/arrays/"
@@ -66,7 +66,7 @@ reg_index = args.reg_index
 
 """Setting up regularisation"""
 chunks = [[{reg: float(coeff)} for coeff in coeffs] for reg in ["L2", "TV", "QV", "ME"]]
-reg_dicts = [{}]  # first one is no regularisation
+reg_dicts = []
 for chunk in chunks:
     for reg_dict in chunk:
         reg_dicts.append(reg_dict)
