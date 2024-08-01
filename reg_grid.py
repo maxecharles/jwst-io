@@ -16,7 +16,7 @@ jax.config.update("jax_enable_x64", True)
 ###################################################################################################
 n_epoch = 80
 
-coeffs = np.hstack((np.array([0.,]) , np.logspace(0, 5, 14)))
+coeffs = 10**7 * (np.linspace(0, 1, 15)**4)
 
 # output_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/output/"
 # model_cache = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/arrays/"
