@@ -49,7 +49,7 @@ def build_io_model(files: list, model_cache: str, initial_distributions: list | 
         log_distributions = {}
         for dist, exp in zip(initial_distributions, exposures):
             dist_key = exp.get_key("log_distribution")
-            log_distributions[dist_key] = dist
+            log_distributions[dist_key] = np.log10(dist)
 
     params["log_distribution"] = log_distributions
 
