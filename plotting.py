@@ -620,7 +620,8 @@ def io_on_that_day(
 
     if n_volc == "all":
         n_volc = len(volcanoes)
-    body.coordinates_of_interest_lonlat = volcanoes[:n_volc]
+    elif n_volc is not None:
+        body.coordinates_of_interest_lonlat = volcanoes[:n_volc]
 
     return body
 

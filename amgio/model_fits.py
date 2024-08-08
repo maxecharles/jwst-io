@@ -32,10 +32,9 @@ class ResolvedFit(ModelFit):
         image = self.model_detector(image, model, exposure)
         ramp = self.model_ramp(image, model, exposure)
         return self.model_read(ramp, model, exposure)
-    
+
 
 class IoResolvedFit(ResolvedFit):
-
     def get_spectra(self, model, exposure):
         wavels, filt_weights = model.filters[exposure.filter]
         source_weights = model.source_spectrum.weights

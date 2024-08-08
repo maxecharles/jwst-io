@@ -1,8 +1,13 @@
-from jax import numpy as np
+import jax
+from jax import numpy as np, Array
 from dLux import utils as dlu
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 import planetmapper
+
+# for setting NaNs to grey
+seismic = mpl.colormaps["seismic"]
+seismic.set_bad("k", 0.5)
 
 
 def plot_diffraction_limit(model, ax=None, OOP=False):
@@ -159,3 +164,36 @@ def plot_io_with_ephemeris(
             by_label.keys(),
             loc="upper left",
         )
+
+
+def get_residuals(
+    arr1: Array,
+    arr2: Array,
+    return_bounds: bool = False,
+    halfrange: float = None,  # passed to CenteredNorm
+):
+    arr1 = np.array(arr1)
+    arr2 = np.array(arr2)
+    residuals = arr1 - arr2
+
+    if return_bounds:
+        norm = mpl.colors.CenteredNorm(halfrange=halfrange)
+        bound_dict = {"norm": norm, "cmap": seismic}
+        return residuals, bound_dict
+
+    return residuals
+
+
+def get_loglike_maps(true_model, final_model, exposures, std_min: int = 100):
+    flux = 10 ** true_model.params["fluxes"]["IO_F430M"]
+
+    maps = []
+
+    for exp in exposures:
+        truth = flux * true_model.distribution(exp)
+        recovered = flux * final_model.distribution(exp)
+        std = np.maximum(np.sqrt(truth), std_min)
+
+        maps.append(-jax.scipy.stats.norm.logpdf(truth, recovered, std))
+
+    return maps

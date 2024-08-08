@@ -16,7 +16,14 @@ jax.config.update("jax_enable_x64", True)
 ###################################################################################################
 n_epoch = 80
 
-coeffs = 10**7 * (np.linspace(0, 1, 15)**4)
+grid_len = 6
+curve = np.linspace(0, 1, grid_len)**4
+coeffs = {
+    "L2": 2e6 * curve,
+    "TV": 2e2 * curve,
+    "QV": 1e7 * curve,
+    "ME": 1e3 * curve,
+}
 
 # output_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/output/"
 # model_cache = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/arrays/"
@@ -65,7 +72,7 @@ args = parser.parse_args()
 reg_index = args.reg_index
 
 """Setting up regularisation"""
-chunks = [[{reg: float(coeff)} for coeff in coeffs] for reg in ["L2", "TV", "QV", "ME"]]
+chunks = [[{reg: float(coeff)} for coeff in coeffs[reg]] for reg in ["L2", "TV", "QV", "ME"]]
 reg_dicts = []
 for chunk in chunks:
     for reg_dict in chunk:
