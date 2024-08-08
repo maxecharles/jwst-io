@@ -13,9 +13,16 @@ from amgio import (
 jax.config.update("jax_enable_x64", True)
 
 ###################################################################################################
-n_epoch = 80
+n_epoch = 200
 
-coeffs = 10**7 * (np.linspace(0, 1, 15)**4)
+grid_len = 6
+curve = np.linspace(0, 1, grid_len)**4
+coeffs = {
+    "L2": 2e6 * curve,
+    "TV": 2e2 * curve,
+    "QV": 1e7 * curve,
+    "ME": 1e3 * curve,
+}
 
 # output_dir = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/output/"
 # model_cache = "/Users/mcha5804/Library/CloudStorage/OneDrive-TheUniversityofSydney(Students)/PyCharm/jwst/io/arrays/"
@@ -42,15 +49,15 @@ all_files = file_fn()  # loading io and calibrator files
 files = [file for file in all_files if file[0].header["TARGPROP"] == "IO"]
 
 # BUILDING MODEL
-model, exposures = build_model.build_io_model(files, model_cache)
+model, _, exposures = build_model.build_simulated_models(files, model_cache)
 
 # OPTIMISATION
 fit_params = [
-    "positions",
+    # "positions",
     "fluxes",
     # "one_on_fs",
     "log_distribution",
-    "source_spectrum.coefficients",
+    # "source_spectrum.coefficients",
 ]
 
 # calculating fishers
@@ -64,7 +71,7 @@ args = parser.parse_args()
 reg_index = args.reg_index
 
 """Setting up regularisation"""
-chunks = [[{reg: float(coeff)} for coeff in coeffs] for reg in ["L2", "TV", "QV", "ME"]]
+chunks = [[{reg: float(coeff)} for coeff in coeffs[reg]] for reg in ["L2", "TV", "QV", "ME"]]
 reg_dicts = []
 for chunk in chunks:
     for reg_dict in chunk:
@@ -78,11 +85,11 @@ args = {
 }
 
 config = {
-    "positions": sgd(3e-1, 0),
-    "fluxes": sgd(2e-1, 3),
+    # "positions": sgd(3e-1, 0),
+    "fluxes": sgd(8e1, 0),
     # "one_on_fs": sgd(1e-1, 9),
-    "log_distribution": adam(2e-1, 4, (10, 0.25), b1=0.7),
-    "source_spectrum.coefficients": sgd(1e-1, 5),
+    "log_distribution": adam(2e-1, 3, (8, 0.3), b1=0.7),
+    # "source_spectrum.coefficients": sgd(1e-1, 5),
 }
 
 # running optimisation
