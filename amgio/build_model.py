@@ -221,11 +221,10 @@ def build_simulated_models(files: list, model_cache: str, n_ints: int = 1):
     source_distributions = [A, B, C]
 
     # building model
-    files = files[:3]  # only want 3 files
-    temp_model, temp_exposures = build_io_model(files, model_cache, initial_distributions=source_distributions)
+    sim_files = files[:3]  # only want 3 files
+    temp_model, temp_exposures = build_io_model(sim_files, model_cache, initial_distributions=source_distributions)
 
     # simulating uncertainties
-    sim_files = files
     for idx, exp in enumerate(temp_exposures):
 
         # simulating slope data

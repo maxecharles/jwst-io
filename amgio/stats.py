@@ -8,7 +8,6 @@ def L1_loss(model):
 
 
 def L2_loss(model, exposure):
-    # TODO BRUH THIS NORMALISED
     distribution = model.distribution(exposure)
     return np.nansum((distribution - distribution.mean()) ** 2)
 
